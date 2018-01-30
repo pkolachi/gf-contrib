@@ -4,7 +4,9 @@
 concrete UDTranslateSwe of UDTranslate =
   TranslateSwe,
   VerbSwe [UseCopula],
-  ExtensionsSwe [GenNP,UseQuantPN,ComplVPIVV] **
+  ExtensionsSwe [GenNP,UseQuantPN,ComplVPIVV],
+  ExtendSwe [VPI2,VPS2,ListVPI2,ListVPS2,MkVPS2,ConjVPS2,ComplVPS2,MkVPI2,ConjVPI2,ComplVPI2],
+  UDDictionarySwe **
 UDTranslateFunctor - [BackupS,BackupVPS] with
   (Syntax = SyntaxSwe),
   (Symbolic = SymbolicSwe),

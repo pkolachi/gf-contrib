@@ -7,26 +7,33 @@ import qualified Data.Map.Strict as M
 import qualified PGF
 import GF (BindType(Explicit)) ---- should not need to import this!!
 import Text.PrettyPrint (render)
+import Debug.Trace
+
+-- the trace functions have been modified to accepted variable names as arguments 
+tracePrS   varname v = v -- trace ("#" ++ varname ++ "\t" ++ show v) v
+tracePrSub varname v = v -- trace ("\t" ++ "#--" ++ varname ++ "\t" ++ show v) v
+tracePrL   varname v = v -- trace ("##" ++ varname ++ "\t" ++ show v ++ "\n\n") v
+traceMsgPr mesg    v = v -- trace ("#" ++ mesg ++ " " ++ show v) v
 
 getConfiguration :: [FilePath] -> Maybe PGF.PGF -> IO Configuration
 getConfiguration files mpgf = do
   ss <- mapM readFile files >>= return . concatMap lines
-  let ls = [takeWhile (/="--") (words l) |        -- possible tail comment separated by --
-                   l@(c:_) <- ss, notElem c "-"]  -- non-empty lines, not starting with -
+  let ls = [takeWhile (/="--") (words l) |                                     -- possible tail comment separated by --
+                   l@(c:_) <- ss, notElem c "-"]                               -- non-empty lines, not starting with -
   let metalines = [ws | ws@(_:_) <- ls, elem "#" ws]
   let catlines  = [ws | ws@(_:_) <- ls, not (any (flip elem ws) [";", ":", "=", "#"]) ]
-  let funlines  = [ws | ws@(w:_) <- ls, w /="*",elem ":" ws]   -- functions defined in the config file
+  let funlines  = [ws | ws@(w:_) <- ls, w /="*",elem ":" ws]                   -- functions defined in the config file
   let backuplines = [ws | "*":ws <- ls]
   let deflines  = [ws | ws@(w:_) <- ls, elem "=" ws, w /= "cat"]
   let helpcatlines  = [(k,c) | "cat":k:"=":c:_ <- ls]
 
-  let lablines  = [ws | ws@(w:_) <- ls, w /="*",elem ";" ws, notElem ":" ws] -- labels for pgf functions
+  let lablines  = [ws | ws@(w:_) <- ls, w /="*",elem ";" ws, notElem ":" ws]   -- labels for pgf functions
   let labmap    = M.fromList [(f,(ls,ms)) | f:";":lms <- lablines, let (ls,ms) = break (elem '=') lms]
   let pgfmap    = maybe M.empty (M.fromList . pgfFunctions) mpgf
   let pgffuns   = [initFunInfo {funid = f,
                                 valtype = c,
                                 argtypes = zipCatsLabels cs ls,
-                                morphoconstraints = ms
+                                morphoconstraints = map pMorConstraint ms      -- morph. constraints
                                 }
                         |
                       (f,(c,cs)) <- M.assocs pgfmap,
@@ -52,6 +59,13 @@ getConfiguration files mpgf = do
     helpcategories = helps
     }
 
+pMorConstraint :: String -> LMorphoConstraint 
+pMorConstraint mc = case break (=='=') mc of
+  (lf,'=':v)  -> case break (=='.') lf of 
+                  (l,'.':f) -> (l,(f,v))
+                  (f,"") -> ("head",(f,v))
+  (_,"")     -> ("head",(mc,"")) --- error $ "ERROR: no morph info from " ++ mc
+
 pFunInfo :: [String] -> FunInfo
 pFunInfo s = case s of
   f : ":"  : ts ->
@@ -63,24 +77,27 @@ pFunInfo s = case s of
       funid = f,
       valtype = (last typs),
       argtypes = args,
-      morphoconstraints = mor
+      morphoconstraints = map pMorConstraint mor
       } 
   _ -> error $ "ERROR: no function info from " ++ unwords s
 
 zipCatsLabels typs labs = if (elem (length typs) [1,length labs])
-  then zip typs (labs ++ ["head"]) -- head not marked for 1-arg functions
+  then zip typs (labs ++ ["head"])                                             -- head not marked for 1-arg functions
   else error $ "ERROR: unmatched arguments and labels in " ++ unwords typs ++ " ; " ++ unwords labs
 
 pCatMap :: [[String]] -> CatMap
 pCatMap = M.fromListWith (++) . concatMap pCatInfo where
   pCatInfo s = case s of
-     c:pms -> [(p,[initCatInfo{catid=c, mconstraints=ms}]) | let (ps,ms) = break (elem '=') pms, p <- ps]
+     c:pms -> [(p, [initCatInfo {
+                       catid=c, 
+                       mconstraints=map pMorConstraint ms
+                    }]) | let (ps,ms) = break (elem '=') pms, p <- ps]
      _ -> error $ "ERROR: no category info from " ++ unwords s
 
 getDefMap :: Maybe PGF.PGF -> [FunInfo] -> M.Map Cat Cat -> [[String]] -> DefMap
 getDefMap mpgf funs helps = M.fromList . filter check . map pDefInfo where
   pDefInfo s = case break (=="=") s of
-     (p:vs, _:c:cs) -> (p, (vs, pGFTree (unwords (c:cs))))
+     (p:vs, _:c:cs) -> tracePrS "defmap" $ (p, (vs, pGFTree (unwords (c:cs))))
      _ -> error $ "ERROR: no definition (yet) from " ++ unwords s
   check d@(p,(vs,t)) =
     let
@@ -92,7 +109,7 @@ getDefMap mpgf funs helps = M.fromList . filter check . map pDefInfo where
       exp = mkExp vs t
     in case mpgf of
       Nothing -> True
-      _ | isPrefixOf "Backup" p -> True ---- to allow temporary backup functions; TODO these should disappear
+      _ | isPrefixOf "Backup" p -> True   ---- to allow temporary backup functions; TODO these should disappear
       Just pgf -> either (error . (("ERROR IN DEFINITION OF " ++ p ++ " : ")++) . render . PGF.ppTcError)
                          (const True) (PGF.checkExpr pgf exp typ)
   mkExp vs (T f ts) = foldr (PGF.mkAbs Explicit)   -- \vs -> f ts ; --- the PGF.mkAbs API is very low-level
@@ -117,35 +134,35 @@ pGFTree s = case PGF.readExpr s of
 -- problems: first lin not always the lemma; cannot get variants
 pgfDictionary :: Configuration -> PGF.PGF -> Lang -> Dictionary
 pgfDictionary config pgf lang = M.fromListWith (++) (configlex ++ rules) where
-  rules = [((w, c), [PGF.showCId f]) |                              -- (lemma,category) -> function
+  rules = [((w, c), [PGF.showCId f]) |                                         -- (lemma,category) -> function
               (k,c) <- [(k,c) |
-                 k <- PGF.categories pgf, let c = PGF.showCId k,    -- consider only categories present in pgf
-                 elem c cats],                                      -- consider only categories used in config
-              f <- PGF.functionsByCat pgf k,                        -- take any function from such a category
-              Just ft <- [PGF.functionType pgf f],                  -- inspect the type of the function
-              let (hs,cid,_) = PGF.unType ft, null hs,              -- check that it is a basic type (i.e. no args)
-              let w0 = PGF.linearize pgf cncname (PGF.mkApp f []),  -- take the first lin ---- assumes this is the lemma
-              let w = unlexBind w0,                                 -- compute bind tokens (needed in stemmed Finnish)
-              length (words w) == 1                                 -- exclude multiwords
+                 k <- PGF.categories pgf, let c = PGF.showCId k,               -- consider only categories present in pgf
+                 elem c cats],                                                 -- consider only categories used in config
+              f <- PGF.functionsByCat pgf k,                                   -- take any function from such a category
+              Just ft <- [PGF.functionType pgf f],                             -- inspect the type of the function
+              let (hs,cid,_) = PGF.unType ft, null hs,                         -- check that it is a basic type (i.e. no args)
+              let w0 = PGF.linearize pgf cncname (PGF.mkApp f []),             -- take the first lin ---- assumes this is the lemma
+              let w = unlexBind w0,                                            -- compute bind tokens (needed in stemmed Finnish)
+              length (words w) == 1                                            -- exclude multiwords
               ]
   cats = nub $ map catid $ concat $ M.elems $ categories config
-  cncname = PGF.mkCId (grammarname config ++ lang)                  -- e.g. UDTranslate ++ Swe
+  cncname = PGF.mkCId (grammarname config ++ lang)                             -- e.g. UDTranslate ++ Swe
   
-  configlex = [((w,catid ci),[quote w]) |                           -- add strings from config to the lexicon
-                (p,cis) <- M.assocs (categories config), ci <- cis, -- they come from category definitions of form
-                'l':'e':'m':'m':'a':'=':w <- mconstraints ci        --    <cat> <pos> lemma=<word>
-              ] ++                                                  -- e.g.  Cop_ VERB lemma=be -> ((be,Cop_),"be")
+  configlex = [((w,catid ci),[quote w]) |                                      -- add strings from config to the lexicon
+                (p,cis) <- M.assocs (categories config), ci <- cis,            -- they come from category definitions of form
+                ("head",("lemma",w)) <- mconstraints ci                        --    <cat> <pos> lemma=<word>
+              ] ++                                                             -- e.g.  Cop_ VERB lemma=be -> ((be,Cop_),"be")
               [((w, valtype fi),[funid fi]) | 
-                fi <- functions config, null (argtypes fi),         -- they can also come from 0-place function definitions
-                'l':'e':'m':'m':'a':'=':w <- morphoconstraints fi   -- of form <fun> : <cat> ; lemma=word
-              ]                                                     -- e.g.  must_VV : VV ; lemma=must
+                fi <- functions config, null (argtypes fi),                    -- they can also come from 0-place function definitions
+                ("head",("lemma",w)) <- morphoconstraints fi                   -- of form <fun> : <cat> ; lemma=word
+              ]                                                                -- e.g.  must_VV : VV ; lemma=must
               
 pgfFunctions :: PGF.PGF -> [(Fun,(Cat,[Cat]))]
 pgfFunctions pgf = [
     (PGF.showCId f, typ) |
       f <- PGF.functions pgf, 
       Just ft <- [PGF.functionType pgf f],
-      let (hs,cid,_) = PGF.unType ft, not (null hs),                -- ft must be a true function type
+      let (hs,cid,_) = PGF.unType ft, not (null hs),                           -- ft must be a true function type
       let typ = (PGF.showCId cid,
             [PGF.showCId c | (_,_,vt) <- hs, (_,c,_) <- [PGF.unType vt]])
       ]
@@ -185,7 +202,16 @@ getDictionary file lang = do
           let w = if lang=="Fin" then fw else ew
           ]
     _ -> error $ "only languages Eng and Fin recognized in this dictionary"
-    
+
+{-
+    - variant dictionary 
+N    albatross   albatross_N
+-}
+getExtraLexicon :: FilePath -> IO Dictionary
+getExtraLexicon file = do
+  ds <- readFile file >>= return . fromTabs
+  return $ M.fromListWith (++) [((ew,c), words f) | d@(c:ew:f:_)<-ds]
+
 {-
 -- Dictionary mapping from data
 
@@ -204,6 +230,5 @@ N	n00002452	esine	thing		thing_N
 
 catOfFun = reverse . takeWhile (/='_') . reverse ---- the GF Dict convention...
 -}
-
 
 

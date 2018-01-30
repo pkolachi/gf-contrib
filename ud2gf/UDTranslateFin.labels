@@ -10,21 +10,33 @@ Predet DET lemma=kaikki
 
 -- syncategorematic words
 
-Neg_          VERB   lemma=ei
-
+Neg_          VERB   lemma=ei    -- also look for Connegative=Yes feature on auxiliary verbs ; Polarity=neg is also marked here but main verb does not get any features 
+Fut_          VERB   
+Cond_         VERB
 
 PrPerf_       AUX    lemma=olla      VerbForm=Fin   Tense=Pres
 PaPerf_       AUX    lemma=olla      VerbForm=Fin   Tense=Past
-FuPerf_       AUX    lemma=olla      VerbForm=Inf
+FuPerf_       AUX    lemma=olla      Mood=Cnd   -- no future exists ; look for Simple Present
 
 
-
+-- cop:own  look for specific extensions "I have" => "to me there is" 
 PrCop_        VERB   lemma=olla      VerbForm=Fin   Tense=Pres
 PaCop_        VERB   lemma=olla      VerbForm=Fin   Tense=Past
 FuCop_        VERB   lemma=olla      VerbForm=Inf
 PartCop_      VERB   lemma=olla      VerbForm=Past  Tense=Past
+-- GerCop_ does not exist (Progrs simplify)
+
 
 ThatMark_     SCONJ  lemma=että
+ThatNegMark_  VERB   lemma=etta#ei
+SubjNegMark_  VERB   lemma=Subj+ei
+
+
+-- Case=3InfForm=3   -> ProgrVP 
+
+-- Voice=Pass -> For all passives; Voice=Act 
+
+
 Comma_        PUNCT  lemma=,
 Amp_          PUNCT  lemma=&
 Orslash_      PUNCT  lemma=/
@@ -38,3 +50,8 @@ Conjneither_		CONJ		lemma=ei
 Conjnor_    		CONJ		lemma=eikä		
 Conjor_     		CONJ		lemma=tai		
 
+-- ExistNP and ExistNPAdv change word -order  no expl labels exist
+-- ProDrop_ can happen with 1st / 2nd pronouns =- not with 3rd pronouns
+-- itse is reflexive for everything
+
+-- Clitic=Ko gives me by magic questions

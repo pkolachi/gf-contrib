@@ -1,0 +1,680 @@
+-+  Tense and Polarity constructions for clauses
+
+
+-- Consider all the cases of tensed VPs that can occur using the Translate grammar
+-- These are functions that introduce auxiliary verbs as 
+-- syncategorematic words in the VPS 
+-- Also for functions like compula and progressive, it is necessary to add cases
+-- where the Comp/VP can be used as other types like VP, VPI etc. 
+
+-- Base case:   UseCl -> MkVPS
+-- Passives :   PassVPSlash/PassAgentVPSlash 
+-- Copulas  :   UseComp
+-- ProgrVP  : 
+-- Passives ++ ProgrVP
+-- Copulas  ++ ProgrVP   -- is this even valid?? Treebank does not have even one
+--                       -- such case. 
+-- Questions 
+-- ICopulas
+
+-- ++Declarative clauses++ 
+-- +++Examples+++
+-- "apples kill him"                         TTAnt TPres ASimul    PPos
+-- "apples killed him"                       TTAnt TPast ASimul    PPos
+-- "apples will kill him"                    TTAnt TFut  ASimul    PPos
+-- "apples would kill him"                   TTAnt TCond ASimul    PPos
+-- "apples have killed him"                  TTAnt TPres AAnter    PPos
+-- "apples had killed him"                   TTAnt TPast AAnter    PPos
+-- "apples will have killed him"             TTAnt TFut  AAnter    PPos
+-- "apples would have killed him"            TTAnt TCond AAnter    PPos
+-- "apples do not kill him"                  TTAnt TPres ASimul    PNeg       
+    -- covered in English specific, NegPresSimulVPSEng_
+-- "apples did not kill him"                 TTAnt TPast ASimul    PNeg       
+    -- NegPastSimulVPSEng_
+-- "apples will not kill him"                TTAnt TFut  ASimul    PNeg
+-- "apples would not kill him"               TTAnt TCond ASimul    PNeg
+-- "apples have not killed him"              TTAnt TPres AAnter    PNeg
+-- "apples had not killed him"               TTAnt TPast AAnter    PNeg
+-- "apples will not have killed him"         TTAnt TFut  AAnter    PNeg
+-- "apples would not have killed him"        TTAnt TCond AAnter    PNeg   
+PosPresSimulVPS_ : VP -> VPS ;                              head               Tense=Pres       VerbForm=Fin
+PosPresSimulVPS_ vp = MkVPS (TTAnt TPres ASimul) PPos vp
+PosPastSimulVPS_ : VP -> VPS ;                              head               Tense=Past       VerbForm=Fin
+PosPastSimulVPS_ vp = MkVPS (TTAnt TPast ASimul) PPos vp
+PosFutSimulVPS_  : Fut_ -> VP -> VPS ;                      aux head           VerbForm=Inf
+PosFutSimulVPS_  tf vp = MkVPS (TTAnt TFut  ASimul) PPos vp
+PosCondSimulVPS_ : Cond_ -> VP -> VPS ;                     aux head           VerbForm=Inf
+PosCondSimulVPS_ tc vp = MkVPS (TTAnt TCond ASimul) PPos vp
+PosPresAnterVPS_ : PrPerf_ -> VP -> VPS ;                   aux head           VerbForm=Part
+PosPresAnterVPS_ at vp = MkVPS (TTAnt TPres AAnter) PPos vp
+PosPastAnterVPS_ : PaPerf_ -> VP -> VPS ;                   aux head           VerbForm=Part
+PosPastAnterVPS_ at vp = MkVPS (TTAnt TPast AAnter) PPos vp
+PosFutAnterVPS_  : FuPerf_ -> Fut_ -> VP -> VPS ;           aux aux head       VerbForm=Part
+PosFutAnterVPS_  at tf vp = MkVPS (TTAnt TFut  AAnter) PPos vp
+PosCondAnterVPS_ : FuPerf_ -> Cond_ -> VP -> VPS ;          aux aux head       VerbForm=Part
+PosCondAnterVPS_ at tc vp = MkVPS (TTAnt TCond AAnter) PPos vp
+NegPresSimulVPS_ : Neg_ -> VP -> VPS ;                      neg head           Tense=Pres       VerbForm=Fin
+NegPresSimulVPS_ p vp = MkVPS (TTAnt TPres ASimul) PNeg vp
+NegPastSimulVPS_ : Neg_ -> VP -> VPS ;                      neg head           Tense=Past       VerbForm=Fin
+NegPastSimulVPS_ p vp = MkVPS (TTAnt TPast ASimul) PNeg vp
+NegFutSimulVPS_  : Neg_ -> Fut_ -> VP -> VPS ;              neg aux head       VerbForm=Inf
+NegFutSimulVPS_  p tf vp = MkVPS (TTAnt TFut  ASimul) PNeg vp
+NegCondSimulVPS_ : Neg_ -> Cond_ -> VP -> VPS ;             neg aux head       VerbForm=Inf
+NegCondSimulVPS_ p tc vp = MkVPS (TTAnt TCond ASimul) PNeg vp
+NegPresAnterVPS_ : Neg_ -> PrPerf_ -> VP -> VPS ;           neg aux head       VerbForm=Part
+NegPresAnterVPS_ p at vp = MkVPS (TTAnt TPres AAnter) PNeg vp
+NegPastAnterVPS_ : Neg_ -> PaPerf_ -> VP -> VPS ;           neg aux head       VerbForm=Part
+NegPastAnterVPS_ p at vp = MkVPS (TTAnt TPast AAnter) PNeg vp
+NegFutAnterVPS_  : Neg_ -> FuPerf_ -> Fut_ -> VP -> VPS ;   neg aux aux head   VerbForm=Part
+NegFutAnterVPS_  p at tf vp = MkVPS (TTAnt TFut  AAnter) PNeg vp
+NegCondAnterVPS_ : Neg_ -> FuPerf_ -> Cond_ -> VP -> VPS ;  neg aux aux head   VerbForm=Part
+NegCondAnterVPS_ p at tc vp = MkVPS (TTAnt TCond AAnter) PNeg vp
+
+-- +++Tense handling for English specific+++
+
+NegPresSimulVPSEng_ : Neg_ -> PrInd_ -> VP -> VPS ;            neg aux head       VerbForm=Inf
+NegPresSimulVPSEng_ p _ vp = MkVPS (TTAnt TPres ASimul) PNeg vp
+NegPastSimulVPSEng_ : Neg_ -> PaInd_ -> VP -> VPS ;            neg aux head       VerbForm=Inf
+NegPastSimulVPSEng_ p _ vp = MkVPS (TTAnt TPast ASimul) PNeg vp
+PPresSQVPSEng_ : PrInd_ -> QVP -> QVPS ;                       aux  head          VerbForm=Inf
+PPresSQVPSEng_ _ qvp       = MkQVPS (TTAnt TPres ASimul) PPos qvp
+PPastSQVPSEng_ : PaInd_ -> QVP -> QVPS ;                       aux  head          VerbForm=Inf 
+PPastSQVPSEng_ _ qvp       = MkQVPS (TTAnt TPast ASimul) PPos qvp
+NPresSQVPSEng_ : Neg_ -> PrInd_ -> QVP -> QVPS ;               neg  aux  head     VerbForm=Inf
+NPresSQVPSEng_ p _ qvp     = MkQVPS (TTAnt TPres ASimul) PNeg qvp
+NPastSQVPSEng_ : Neg_ -> PaInd_ -> QVP -> QVPS ;               neg  aux  head     VerbForm=Inf
+NPastSQVPSEng_ p _ qvp     = MkQVPS (TTAnt TPast ASimul) PNeg qvp
+
+
+-- ++Passive constructions++
+-- +++Examples+++
+-- "apples are killed"                        TTAnt TPres ASimul    PPos
+-- "apples were killed"                       TTAnt TPast ASimul    PPos
+-- "apples will be killed"                    TTAnt TFut  ASimul    PPos
+-- "apples would be killed"                   TTAnt TCond ASimul    PPos
+-- "apples have been killed"                  TTAnt TPres AAnter    PPos
+-- "apples had been killed"                   TTAnt TPast AAnter    PPos
+-- "apples will have been killed"             TTAnt TFut  AAnter    PPos
+-- "apples would have been killed"            TTAnt TCond AAnter    PPos
+-- "apples are not killed"                    TTAnt TPres ASimul    PNeg
+-- "apples were not killed"                   TTAnt TPast ASimul    PNeg
+-- "apples will not be killed"                TTAnt TFut  ASimul    PNeg
+-- "apples would not be killed"               TTAnt TCond ASimul    PNeg
+-- "apples have not been killed"              TTAnt TPres AAnter    PNeg
+-- "apples had not been killed"               TTAnt TPast AAnter    PNeg
+-- "apples will not have been killed"         TTAnt TFut  AAnter    PNeg
+-- "apples would not have been killed"        TTAnt TCond AAnter    PNeg 
+PPrSPassVP_ : PrAuxPass_ -> VPSlash -> VPS ;                                 auxpass  head                      Voice=Pass    -- VerbForm=Part 
+PPaSPassVP_ : PaAuxPass_ -> VPSlash -> VPS ;                                 auxpass  head                      Voice=Pass    -- VerbForm=Part
+PFuSPassVP_ : Fut_ -> InfAuxPass_ -> VPSlash -> VPS ;                        aux  auxpass  head                 Voice=Pass    -- VerbForm=Part
+PCoSPassVP_ : Cond_ -> InfAuxPass_ -> VPSlash -> VPS ;                       aux  auxpass  head                 Voice=Pass    -- VerbForm=Part
+PPrAPassVP_ : PrPerf_ -> PartAuxPass_ -> VPSlash -> VPS ;                    aux  auxpass  head                 Voice=Pass    -- VerbForm=Part
+PPaAPassVP_ : PaPerf_ -> PartAuxPass_ -> VPSlash -> VPS ;                    aux  auxpass  head                 Voice=Pass    -- VerbForm=Part
+PFuAPassVP_ : FuPerf_ -> Fut_ -> PartAuxPass_ -> VPSlash -> VPS ;            aux  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+PCoAPassVP_ : FuPerf_ -> Cond_ -> PartAuxPass_ -> VPSlash -> VPS ;           aux  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+NPrSPassVP_ : Neg_ -> PrAuxPass_ -> VPSlash -> VPS ;                         neg  auxpass  head                 Voice=Pass    -- VerbForm=Part
+NPaSPassVP_ : Neg_ -> PaAuxPass_ -> VPSlash -> VPS ;                         neg  auxpass  head                 Voice=Pass    -- VerbForm=Part
+NFuSPassVP_ : Neg_ -> Fut_ -> InfAuxPass_ -> VPSlash -> VPS ;                neg  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+NCoSPassVP_ : Neg_ -> Cond_ -> InfAuxPass_ -> VPSlash -> VPS ;               neg  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+NPrAPassVP_ : Neg_ -> PrPerf_ -> PartAuxPass_ -> VPSlash -> VPS ;            neg  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+NPaAPassVP_ : Neg_ -> PaPerf_ -> PartAuxPass_ -> VPSlash -> VPS ;            neg  aux  auxpass  head            Voice=Pass    -- VerbForm=Part
+NFuAPassVP_ : Neg_ -> FuPerf_ -> Fut_ -> PartAuxPass_ -> VPSlash -> VPS ;    neg  aux  aux  auxpass  head       Voice=Pass    -- VerbForm=Part
+NCoAPassVP_ : Neg_ -> FuPerf_ -> Cond_ -> PartAuxPass_ -> VPSlash -> VPS ;   neg  aux  aux  auxpass  head       Voice=Pass    -- VerbForm=Part
+PInfPassVP_ : InfAuxPass_ -> VPSlash -> VP ;                                 auxpass  head                      Voice=Pass    -- "be killed" / "get killed"
+PPrSPassVP_ _ vpslash          = MkVPS (TTAnt TPres ASimul) PPos (PassVPSlash vpslash)
+PPaSPassVP_ _ vpslash          = MkVPS (TTAnt TPast ASimul) PPos (PassVPSlash vpslash)
+PFuSPassVP_ tf _ vpslash       = MkVPS (TTAnt TFut  ASimul) PPos (PassVPSlash vpslash)
+PCoSPassVP_ tc _ vpslash       = MkVPS (TTAnt TCond ASimul) PPos (PassVPSlash vpslash)
+PPrAPassVP_ at _ vpslash       = MkVPS (TTAnt TPres AAnter) PPos (PassVPSlash vpslash)
+PPaAPassVP_ at _ vpslash       = MkVPS (TTAnt TPast AAnter) PPos (PassVPSlash vpslash)
+PFuAPassVP_ at tf _ vpslash    = MkVPS (TTAnt TFut  AAnter) PPos (PassVPSlash vpslash)
+PCoAPassVP_ at tc _ vpslash    = MkVPS (TTAnt TCond AAnter) PPos (PassVPSlash vpslash)
+NPrSPassVP_ p _ vpslash        = MkVPS (TTAnt TPres ASimul) PNeg (PassVPSlash vpslash)
+NPaSPassVP_ p _ vpslash        = MkVPS (TTAnt TPast ASimul) PNeg (PassVPSlash vpslash)
+NFuSPassVP_ p tf _ vpslash     = MkVPS (TTAnt TFut  ASimul) PNeg (PassVPSlash vpslash)
+NCoSPassVP_ p tc _ vpslash     = MkVPS (TTAnt TCond ASimul) PNeg (PassVPSlash vpslash)
+NPrAPassVP_ p at _ vpslash     = MkVPS (TTAnt TPres AAnter) PNeg (PassVPSlash vpslash)
+NPaAPassVP_ p at _ vpslash     = MkVPS (TTAnt TPast AAnter) PNeg (PassVPSlash vpslash)
+NFuAPassVP_ p at tf _ vpslash  = MkVPS (TTAnt TFut  AAnter) PNeg (PassVPSlash vpslash)
+NCoAPassVP_ p at tc _ vpslash  = MkVPS (TTAnt TCond AAnter) PNeg (PassVPSlash vpslash)
+PInfPassVP_ _ vpslash          = PassVPSlash vpslash
+
+
+-- This is far too ambiguous for regular NP to be mapped to nmod:agent/nmod label
+-- the agent in PassAgentVPSlash in English is introduced using a CasedNP (NPby8agent_)
+-- this should be universal across languages as long as Prepby8agent_ 
+-- is defined in the language specific configurations
+cat NPby8agent_  = NP
+CasedNPby8agent_ : Prepby8agent_ -> NP -> NPby8agent_   ;   case  head
+CasedNPby8agent_ _ np = np
+
+-- This should now be used to identify agents in passive VPs
+-- Added definition of Prepby8agent_ in English
+-- TODO:  Add it in Swedish and Finnish
+PPrSPassAgentVP_ : PrAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                                 auxpass  head  nmod                      Voice=Pass    -- VerbForm=Part
+PPaSPassAgentVP_ : PaAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                                 auxpass  head  nmod                      Voice=Pass    -- VerbForm=Part
+PFuSPassAgentVP_ : Fut_ -> InfAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                        aux  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+PCoSPassAgentVP_ : Cond_ -> InfAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                       aux  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+PPrAPassAgentVP_ : PrPerf_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                    aux  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+PPaAPassAgentVP_ : PaPerf_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                    aux  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+PFuAPassAgentVP_ : FuPerf_ -> Fut_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;            aux  aux  auxpass  head  nmod            Voice=Pass    -- VerbForm=Part
+PCoAPassAgentVP_ : FuPerf_ -> Cond_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;           aux  aux  auxpass  head  nmod            Voice=Pass    -- VerbForm=Part
+NPrSPassAgentVP_ : Neg_ -> PrAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                         neg  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+NPaSPassAgentVP_ : Neg_ -> PaAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                         neg  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+NFuSPassAgentVP_ : Neg_ -> Fut_ -> InfAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;                neg  aux  auxpass  head  nmod            Voice=Pass    -- VerbForm=Part
+NCoSPassAgentVP_ : Neg_ -> Cond_ -> InfAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ; neg           aux  auxpass  head  nmod                 Voice=Pass    -- VerbForm=Part
+NPrAPassAgentVP_ : Neg_ -> PrPerf_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;            neg  aux  auxpass  head  nmod            Voice=Pass    -- VerbForm=Part
+NPaAPassAgentVP_ : Neg_ -> PaPerf_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;            neg  aux  auxpass  head  nmod            Voice=Pass    -- VerbForm=Part
+NFuAPassAgentVP_ : Neg_ -> FuPerf_ -> Fut_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;    neg  aux  aux auxpass  head  nmod        Voice=Pass    -- VerbForm=Part
+NCoAPassAgentVP_ : Neg_ -> FuPerf_ -> Cond_ -> PartAuxPass_ -> VPSlash -> NPby8agent_ -> VPS ;   neg  aux  aux auxpass  head  nmod        Voice=Pass    -- VerbForm=Part
+PInfPassAgentVP_ : InfAuxPass_ -> VPSlash -> NPby8agent_ -> VP ;                                 aux  head  nmod                          Voice=Pass
+PPrSPassAgentVP_ _ vpslash np          = MkVPS (TTAnt TPres ASimul) PPos (PassAgentVPSlash vpslash np)
+PPaSPassAgentVP_ _ vpslash np          = MkVPS (TTAnt TPast ASimul) PPos (PassAgentVPSlash vpslash np)
+PFuSPassAgentVP_ _ _ vpslash np        = MkVPS (TTAnt TFut  ASimul) PPos (PassAgentVPSlash vpslash np)
+PCoSPassAgentVP_ _ _ vpslash np        = MkVPS (TTAnt TCond ASimul) PPos (PassAgentVPSlash vpslash np)
+PPrAPassAgentVP_ at _ vpslash np       = MkVPS (TTAnt TPres AAnter) PPos (PassAgentVPSlash vpslash np)
+PPaAPassAgentVP_ at _ vpslash np       = MkVPS (TTAnt TPast AAnter) PPos (PassAgentVPSlash vpslash np)
+PFuAPassAgentVP_ at tf _ vpslash np    = MkVPS (TTAnt TFut  AAnter) PPos (PassAgentVPSlash vpslash np)
+PCoAPassAgentVP_ at tc _ vpslash np    = MkVPS (TTAnt TCond AAnter) PPos (PassAgentVPSlash vpslash np)
+NPrSPassAgentVP_ p _ vpslash np        = MkVPS (TTAnt TPres ASimul) PNeg (PassAgentVPSlash vpslash np)
+NPaSPassAgentVP_ p _ vpslash np        = MkVPS (TTAnt TPast ASimul) PNeg (PassAgentVPSlash vpslash np)
+NFuSPassAgentVP_ p tf _ vpslash np     = MkVPS (TTAnt TFut  ASimul) PNeg (PassAgentVPSlash vpslash np)
+NCoSPassAgentVP_ p tc _ vpslash np     = MkVPS (TTAnt TCond ASimul) PNeg (PassAgentVPSlash vpslash np)
+NPrAPassAgentVP_ p at _ vpslash np     = MkVPS (TTAnt TPres AAnter) PNeg (PassAgentVPSlash vpslash np)
+NPaAPassAgentVP_ p at _ vpslash np     = MkVPS (TTAnt TPast AAnter) PNeg (PassAgentVPSlash vpslash np)
+NFuAPassAgentVP_ p at tf _ vpslash np  = MkVPS (TTAnt TFut  AAnter) PNeg (PassAgentVPSlash vpslash np)
+NCoAPassAgentVP_ p at tc _ vpslash np  = MkVPS (TTAnt TCond AAnter) PNeg (PassAgentVPSlash vpslash np)
+PInfPassAgentVP_ _ vpslash np          = PassAgentVPSlash vpslash np 
+
+-- ++Copula constructions++
+-- +++Examples+++
+-- "apples are rotten"                          TTAnt TPres ASimul    PPos
+-- "apples were rotten"                         TTAnt TPast ASimul    PPos
+-- "apples will be rotten"                      TTAnt TFut  ASimul    PPos
+-- "apples would be rotten"                     TTAnt TCond ASimul    PPos
+-- "apples have been rotten"                    TTAnt TPres AAnter    PPos
+-- "apples had been rotten"                     TTAnt TPast AAnter    PPos
+-- "apples will have been rotten"               TTAnt TFut  AAnter    PPos
+-- "apples would have been rotten"              TTAnt TCond AAnter    PPos
+-- "apples are not rotten"                      TTAnt TPres ASimul    PNeg
+-- "apples were not rotten"                     TTAnt TPast ASimul    PNeg
+-- "apples will not be rotten"                  TTAnt TFut  ASimul    PNeg
+-- "apples would not be rotten"                 TTAnt TCond ASimul    PNeg
+-- "apples have not been rotten"                TTAnt TPres AAnter    PNeg
+-- "apples had not been rotten"                 TTAnt TPast AAnter    PNeg
+-- "apples will not have been rotten"           TTAnt TFut  AAnter    PNeg
+-- "apples would not have been rotten"          TTAnt TCond AAnter    PNeg 
+PPrSComp_ : PrCop_ -> Comp -> VPS ;                                cop  head
+PPaSComp_ : PaCop_ -> Comp -> VPS ;                                cop  head
+PFuSComp_ : Fut_ -> FuCop_ -> Comp -> VPS ;                        aux  cop  head
+PCoSComp_ : Cond_ -> FuCop_ -> Comp -> VPS ;                       aux  cop  head
+PPrAComp_ : PrPerf_ -> PartCop_ -> Comp -> VPS ;                   aux  cop  head
+PPaAComp_ : PaPerf_ -> PartCop_ -> Comp -> VPS ;                   aux  cop  head
+PFuAComp_ : FuPerf_ -> Fut_ -> PartCop_ -> Comp -> VPS ;           aux  aux  cop  head
+PCoAComp_ : FuPerf_ -> Cond_ -> PartCop_ -> Comp -> VPS ;          aux  aux  cop  head
+NPrSComp_ : Neg_ -> PrCop_ -> Comp -> VPS ;                        neg  cop  head
+NPaSComp_ : Neg_ -> PaCop_ -> Comp -> VPS ;                        neg  cop  head
+NFuSComp_ : Neg_ -> Fut_ -> FuCop_ -> Comp -> VPS ;                neg  aux  cop  head
+NCoSComp_ : Neg_ -> Cond_ -> FuCop_ -> Comp -> VPS ;               neg  aux  cop  head
+NPrAComp_ : Neg_ -> PrPerf_ -> PartCop_ -> Comp -> VPS ;           neg  aux  cop  head
+NPaAComp_ : Neg_ -> PaPerf_ -> PartCop_ -> Comp -> VPS ;           neg  aux  cop  head
+NFuAComp_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> Comp -> VPS ;   neg  aux  aux  cop  head
+NCoAComp_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> Comp -> VPS ;  neg  aux  aux  cop  head
+PInfComp_ : FuCop_ -> Comp -> VP ;                                 cop  head
+PPrSComp_ _ c         = MkVPS (TTAnt TPres ASimul) PPos (UseComp c)
+PPaSComp_ _ c         = MkVPS (TTAnt TPast ASimul) PPos (UseComp c)
+PFuSComp_ tf _ c      = MkVPS (TTAnt TFut  ASimul) PPos (UseComp c)
+PCoSComp_ tc _ c      = MkVPS (TTAnt TCond ASimul) PPos (UseComp c)
+PPrAComp_ at _ c      = MkVPS (TTAnt TPres AAnter) PPos (UseComp c)
+PPaAComp_ at _ c      = MkVPS (TTAnt TPast AAnter) PPos (UseComp c)
+PFuAComp_ at tf _ c   = MkVPS (TTAnt TFut  AAnter) PPos (UseComp c)
+PCoAComp_ at tc _ c   = MkVPS (TTAnt TCond AAnter) PPos (UseComp c)
+NPrSComp_ p _ c       = MkVPS (TTAnt TPres ASimul) PNeg (UseComp c)
+NPaSComp_ p _ c       = MkVPS (TTAnt TPast ASimul) PNeg (UseComp c)
+NFuSComp_ p tf _ c    = MkVPS (TTAnt TFut  ASimul) PNeg (UseComp c)
+NCoSComp_ p tc _ c    = MkVPS (TTAnt TCond ASimul) PNeg (UseComp c)
+NPrAComp_ p at _ c    = MkVPS (TTAnt TPres AAnter) PNeg (UseComp c)
+NPaAComp_ p at _ c    = MkVPS (TTAnt TPast AAnter) PNeg (UseComp c)
+NFuAComp_ p at tf _ c = MkVPS (TTAnt TFut  AAnter) PNeg (UseComp c)
+NCoAComp_ p at tc _ c = MkVPS (TTAnt TCond AAnter) PNeg (UseComp c)
+PInfComp_ _ c         = UseComp c
+
+-- ++Progressive verb phrases++
+-- +++Examples+++
+-- "apples are killing him"                      TTAnt TPres ASimul    PPos      
+-- "apples were killing him"                     TTAnt TPast ASimul    PPos
+-- "apples will be killing him"                  TTAnt TFut  ASimul    PPos
+-- "apples would be killing him"                 TTAnt TCond ASimul    PPos
+-- "apples have been killing him"                TTAnt TPres AAnter    PPos
+-- "apples had been killing him"                 TTAnt TPast AAnter    PPos
+-- "apples will have been killing him"           TTAnt TFut  AAnter    PPos
+-- "apples would have been killing him"          TTAnt TCond AAnter    PPos
+-- "apples are not killing him"                  TTAnt TPres ASimul    PNeg
+-- "apples were not killing him"                 TTAnt TPast ASimul    PNeg
+-- "apples will not be killing him"              TTAnt TFut  ASimul    PNeg
+-- "apples would not be killing him"             TTAnt TCond ASimul    PNeg
+-- "apples have not been killing him"            TTAnt TPres AAnter    PNeg
+-- "apples had not been killing him"             TTAnt TPast AAnter    PNeg
+-- "apples will not have been killing him"       TTAnt TFut  AAnter    PNeg
+-- "apples would not have been killing him"      TTAnt TCond AAnter    PNeg 
+PPrSProgrVP_ : PrBeVerb_ -> VP -> VPS ;                                aux  head                 VerbForm=Part  Tense=Pres
+PPaSProgrVP_ : PaBeVerb_ -> VP -> VPS ;                                aux  head                 VerbForm=Part  Tense=Pres
+PFuSProgrVP_ : Fut_ -> FuBeVerb_ -> VP -> VPS ;                        aux  aux  head            VerbForm=Part  Tense=Pres
+PCoSProgrVP_ : Cond_ -> FuBeVerb_ -> VP -> VPS ;                       aux  aux  head            VerbForm=Part  Tense=Pres
+PPrAProgrVP_ : PrPerf_ -> PartBeVerb_ -> VP -> VPS ;                   aux  aux  head            VerbForm=Part  Tense=Pres
+PPaAProgrVP_ : PaPerf_ -> PartBeVerb_ -> VP -> VPS ;                   aux  aux  head            VerbForm=Part  Tense=Pres
+PFuAProgrVP_ : FuPerf_ -> Fut_ -> PartBeVerb_ -> VP -> VPS ;           aux  aux  aux  head       VerbForm=Part  Tense=Pres
+PCoAProgrVP_ : FuPerf_ -> Cond_ -> PartBeVerb_ -> VP -> VPS ;          aux  aux  aux  head       VerbForm=Part  Tense=Pres
+NPrSProgrVP_ : Neg_ -> PrBeVerb_ -> VP -> VPS ;                        neg  aux  head            VerbForm=Part  Tense=Pres
+NPaSProgrVP_ : Neg_ -> PaBeVerb_ -> VP -> VPS ;                        neg  aux  head            VerbForm=Part  Tense=Pres
+NFuSProgrVP_ : Neg_ -> Fut_ -> FuBeVerb_ -> VP -> VPS ;                neg  aux  aux  head       VerbForm=Part  Tense=Pres
+NCoSProgrVP_ : Neg_ -> Cond_ -> FuBeVerb_ -> VP -> VPS ;               neg  aux  aux  head       VerbForm=Part  Tense=Pres
+NPrAProgrVP_ : Neg_ -> PrPerf_ -> PartBeVerb_ -> VP -> VPS ;           neg  aux  aux  head       VerbForm=Part  Tense=Pres
+NPaAProgrVP_ : Neg_ -> PaPerf_ -> PartBeVerb_ -> VP -> VPS ;           neg  aux  aux  head       VerbForm=Part  Tense=Pres
+NFuAProgrVP_ : Neg_ -> FuPerf_ -> Fut_ -> PartBeVerb_ -> VP -> VPS ;   neg  aux  aux  aux  head  VerbForm=Part  Tense=Pres
+NCoAProgrVP_ : Neg_ -> FuPerf_ -> Cond_ -> PartBeVerb_ -> VP -> VPS ;  neg  aux  aux  aux  head  VerbForm=Part  Tense=Pres
+PInfProgrVP_ : FuBeVerb_ -> VP -> VP ;                                 aux  head                 VerbForm=Part  Tense=Pres
+-- A few examples in the English UD treebank wrongly annotate
+-- progressive VPs using the morph. feature VerbForm=Ger
+-- This is handling by defining ambiguous configurations
+-- and relying on the beverb to handle more cases 
+PPrSProgrVP_ : PrBeVerb_ -> VP -> VPS ;                                aux  head                 VerbForm=Ger
+PPaSProgrVP_ : PaBeVerb_ -> VP -> VPS ;                                aux  head                 VerbForm=Ger
+PFuSProgrVP_ : Fut_ -> FuBeVerb_ -> VP -> VPS ;                        aux  aux  head            VerbForm=Ger
+PCoSProgrVP_ : Cond_ -> FuBeVerb_ -> VP -> VPS ;                       aux  aux  head            VerbForm=Ger
+PPrAProgrVP_ : PrPerf_ -> PartBeVerb_ -> VP -> VPS ;                   aux  aux  head            VerbForm=Ger
+PPaAProgrVP_ : PaPerf_ -> PartBeVerb_ -> VP -> VPS ;                   aux  aux  head            VerbForm=Ger
+PFuAProgrVP_ : FuPerf_ -> Fut_ -> PartBeVerb_ -> VP -> VPS ;           aux  aux  aux  head       VerbForm=Ger
+PCoAProgrVP_ : FuPerf_ -> Cond_ -> PartBeVerb_ -> VP -> VPS ;          aux  aux  aux  head       VerbForm=Ger
+NPrSProgrVP_ : Neg_ -> PrBeVerb_ -> VP -> VPS ;                        neg  aux  head            VerbForm=Ger
+NPaSProgrVP_ : Neg_ -> PaBeVerb_ -> VP -> VPS ;                        neg  aux  head            VerbForm=Ger
+NFuSProgrVP_ : Neg_ -> Fut_ -> FuBeVerb_ -> VP -> VPS ;                neg  aux  aux  head       VerbForm=Ger
+NCoSProgrVP_ : Neg_ -> Cond_ -> FuBeVerb_ -> VP -> VPS ;               neg  aux  aux  head       VerbForm=Ger
+NPrAProgrVP_ : Neg_ -> PrPerf_ -> PartBeVerb_ -> VP -> VPS ;           neg  aux  aux  head       VerbForm=Ger
+NPaAProgrVP_ : Neg_ -> PaPerf_ -> PartBeVerb_ -> VP -> VPS ;           neg  aux  aux  head       VerbForm=Ger
+NFuAProgrVP_ : Neg_ -> FuPerf_ -> Fut_ -> PartBeVerb_ -> VP -> VPS ;   neg  aux  aux  aux  head  VerbForm=Ger
+NCoAProgrVP_ : Neg_ -> FuPerf_ -> Cond_ -> PartBeVerb_ -> VP -> VPS ;  neg  aux  aux  aux  head  VerbForm=Ger
+PInfProgrVP_ : FuBeVerb_ -> VP -> VP ;                                 aux  head                 VerbForm=Ger
+PPrSProgrVP_ _ vp          = MkVPS (TTAnt TPres ASimul) PPos (ProgrVP vp)
+PPaSProgrVP_ _ vp          = MkVPS (TTAnt TPast ASimul) PPos (ProgrVP vp)
+PFuSProgrVP_ tf _ vp       = MkVPS (TTAnt TFut  ASimul) PPos (ProgrVP vp)
+PCoSProgrVP_ tc _ vp       = MkVPS (TTAnt TCond ASimul) PPos (ProgrVP vp)
+PPrAProgrVP_ at _ vp       = MkVPS (TTAnt TPres AAnter) PPos (ProgrVP vp)
+PPaAProgrVP_ at _ vp       = MkVPS (TTAnt TPast AAnter) PPos (ProgrVP vp)
+PFuAProgrVP_ at tf _ vp    = MkVPS (TTAnt TFut  AAnter) PPos (ProgrVP vp)
+PCoAProgrVP_ at tc _ vp    = MkVPS (TTAnt TCond AAnter) PPos (ProgrVP vp)
+NPrSProgrVP_ p _ vp        = MkVPS (TTAnt TPres ASimul) PNeg (ProgrVP vp)
+NPaSProgrVP_ p _ vp        = MkVPS (TTAnt TPast ASimul) PNeg (ProgrVP vp)
+NFuSProgrVP_ p tf _ vp     = MkVPS (TTAnt TFut  ASimul) PNeg (ProgrVP vp)
+NCoSProgrVP_ p tc _ vp     = MkVPS (TTAnt TCond ASimul) PNeg (ProgrVP vp)
+NPrAProgrVP_ p at _ vp     = MkVPS (TTAnt TPres AAnter) PNeg (ProgrVP vp)
+NPaAProgrVP_ p at _ vp     = MkVPS (TTAnt TPast AAnter) PNeg (ProgrVP vp)
+NFuAProgrVP_ p at tf _ vp  = MkVPS (TTAnt TFut  AAnter) PNeg (ProgrVP vp)
+NCoAProgrVP_ p at tc _ vp  = MkVPS (TTAnt TCond AAnter) PNeg (ProgrVP vp)
+PInfProgrVP_ _ vp          = ProgrVP vp 
+
+-- ++Passives + progressive tense++
+-- +++Examples+++
+-- "apples are being killed"                          TTAnt TPres ASimul    PPos 
+-- "apples were being killed"                         TTAnt TPast ASimul    PPos
+-- "apples will be being killed"                      TTAnt TFut  ASimul    PPos
+-- "apples would be being killed"                     TTAnt TCond ASimul    PPos
+-- "apples have been being killed"                    TTAnt TPres AAnter    PPos
+-- "apples had been being killed"                     TTAnt TPast AAnter    PPos
+-- "apples will have been being killed"               TTAnt TFut  AAnter    PPos
+-- "apples would have been being killed"              TTAnt TCond AAnter    PPos
+-- "apples are not being killed"                      TTAnt TPres ASimul    PNeg
+-- "apples were not being killed"                     TTAnt TPast ASimul    PNeg
+-- "apples will not be being killed"                  TTAnt TFut  ASimul    PNeg
+-- "apples have not been being killed"                TTAnt TCond ASimul    PNeg
+-- "apples would not be being killed"                 TTAnt TPres AAnter    PNeg
+-- "apples had not been being killed"                 TTAnt TPast AAnter    PNeg
+-- "apples will not have been being killed"           TTAnt TFut  AAnter    PNeg
+-- "apples would not have been being killed"          TTAnt TCond AAnter    PNeg 
+PPrSPassVP+ProgrVP_ : PrBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                                aux  auxpass  head                     Voice=Pass
+PPaSPassVP+ProgrVP_ : PaBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                                aux  auxpass  head                     Voice=Pass
+PFuSPassVP+ProgrVP_ : Fut_ -> FuBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                        aux  aux  auxpass  head                Voice=Pass
+PCoSPassVP+ProgrVP_ : Cond_ -> FuBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                       aux  aux  auxpass  head                Voice=Pass
+PPrAPassVP+ProgrVP_ : PrPerf_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                   aux  aux  auxpass  head                Voice=Pass
+PPaAPassVP+ProgrVP_ : PaPerf_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                   aux  aux  auxpass  head                Voice=Pass
+PFuAPassVP+ProgrVP_ : FuPerf_ -> Fut_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;           aux  aux  aux  auxpass  head           Voice=Pass
+PCoAPassVP+ProgrVP_ : FuPerf_ -> Cond_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;          aux  aux  aux  auxpass  head           Voice=Pass
+NPrSPassVP+ProgrVP_ : Neg_ -> PrBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                        neg  aux  auxpass  head                Voice=Pass
+NPaSPassVP+ProgrVP_ : Neg_ -> PaBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                        neg  aux  auxpass  head                Voice=Pass
+NFuSPassVP+ProgrVP_ : Neg_ -> Fut_ -> FuBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;                neg  aux  aux  auxpass  head           Voice=Pass
+NCoSPassVP+ProgrVP_ : Neg_ -> Cond_ -> FuBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;               neg  aux  aux  auxpass  head           Voice=Pass
+NPrAPassVP+ProgrVP_ : Neg_ -> PrPerf_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;           neg  aux  aux  auxpass  head           Voice=Pass
+NPaAPassVP+ProgrVP_ : Neg_ -> PaPerf_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;           neg  aux  aux  auxpass  head           Voice=Pass
+NFuAPassVP+ProgrVP_ : Neg_ -> FuPerf_ -> Fut_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;   neg  aux  aux  aux  auxpass  head      Voice=Pass
+NCoAPassVP+ProgrVP_ : Neg_ -> FuPerf_ -> Cond_ -> PartBeVerb_ -> GerAuxPass_ -> VPSlash -> VPS ;  neg  aux  aux  aux  auxpass  head      Voice=Pass
+-- PInfPassVP+ProgrVP_ : ... 
+PPrSPassVP+ProgrVP_ _ gbe vpslash          = MkVPS (TTAnt TPres ASimul) PPos (ProgrVP (PassVPSlash vpslash))
+PPaSPassVP+ProgrVP_ _ gbe vpslash          = MkVPS (TTAnt TPast ASimul) PPos (ProgrVP (PassVPSlash vpslash))
+PFuSPassVP+ProgrVP_ tf _ gbe vpslash       = MkVPS (TTAnt TFut  ASimul) PPos (ProgrVP (PassVPSlash vpslash))
+PCoSPassVP+ProgrVP_ tc _ gbe vpslash       = MkVPS (TTAnt TCond ASimul) PPos (ProgrVP (PassVPSlash vpslash))
+PPrAPassVP+ProgrVP_ at _ gbe vpslash       = MkVPS (TTAnt TPres AAnter) PPos (ProgrVP (PassVPSlash vpslash))
+PPaAPassVP+ProgrVP_ at _ gbe vpslash       = MkVPS (TTAnt TPast AAnter) PPos (ProgrVP (PassVPSlash vpslash))
+PFuAPassVP+ProgrVP_ at tf _ gbe vpslash    = MkVPS (TTAnt TFut  AAnter) PPos (ProgrVP (PassVPSlash vpslash))
+PCoAPassVP+ProgrVP_ at tc _ gbe vpslash    = MkVPS (TTAnt TCond AAnter) PPos (ProgrVP (PassVPSlash vpslash))
+NPrSPassVP+ProgrVP_ p _ gbe vpslash        = MkVPS (TTAnt TPres ASimul) PNeg (ProgrVP (PassVPSlash vpslash))
+NPaSPassVP+ProgrVP_ p _ gbe vpslash        = MkVPS (TTAnt TPast ASimul) PNeg (ProgrVP (PassVPSlash vpslash))
+NFuSPassVP+ProgrVP_ p tf _ gbe vpslash     = MkVPS (TTAnt TFut  ASimul) PNeg (ProgrVP (PassVPSlash vpslash))
+NCoSPassVP+ProgrVP_ p tc _ gbe vpslash     = MkVPS (TTAnt TCond ASimul) PNeg (ProgrVP (PassVPSlash vpslash))
+NPrAPassVP+ProgrVP_ p at _ gbe vpslash     = MkVPS (TTAnt TPres AAnter) PNeg (ProgrVP (PassVPSlash vpslash))
+NPaAPassVP+ProgrVP_ p at _ gbe vpslash     = MkVPS (TTAnt TPast AAnter) PNeg (ProgrVP (PassVPSlash vpslash))
+NFuAPassVP+ProgrVP_ p at tf _ gbe vpslash  = MkVPS (TTAnt TFut  AAnter) PNeg (ProgrVP (PassVPSlash vpslash))
+NCoAPassVP+ProgrVP_ p at tc _ gbe vpslash  = MkVPS (TTAnt TCond AAnter) PNeg (ProgrVP (PassVPSlash vpslash))
+
+
+-- ++Question verb phrases  (to be verified)++
+
+PPresSQVPS_ : QVP -> QVPS ;                               head                      VerbForm=Fin   Tense=Pres
+PPastSQVPS_ : QVP -> QVPS ;                               head                      VerbForm=Fin   Tense=Past
+PFutSQVPS_  : Fut_ -> QVP -> QVPS ;                       aux  head                 VerbForm=Inf
+PCondSQVPS_ : Cond_ -> QVP -> QVPS ;                      aux  head                 VerbForm=Inf
+PPresAQVPS_ : PrPerf_ -> QVP -> QVPS ;                    aux  head                 VerbForm=Part
+PPastAQVPS_ : PaPerf_ -> QVP -> QVPS ;                    aux  head                 VerbForm=Part
+PFutAQVPS_  : FuPerf_ -> Fut_ -> QVP -> QVPS ;            aux  aux  head            VerbForm=Part
+PCondAQVPS_ : FuPerf_ -> Cond_ -> QVP -> QVPS ;           aux  aux  head            VerbForm=Part
+NPresSQVPS_ : Neg_ -> QVP -> QVPS ;                       neg  head                 VerbForm=Fin   Tense=Pres
+NPastSQVPS_ : Neg_ -> QVP -> QVPS ;                       neg  head                 VerbForm=Fin   Tense=Past
+NFutSQVPS_  : Neg_ -> Fut_ -> QVP -> QVPS ;               neg  aux  head            VerbForm=Inf
+NCondSQVPS_ : Neg_ -> Cond_ -> QVP -> QVPS ;              neg  aux  head            VerbForm=Inf
+NPresAQVPS_ : Neg_ -> PrPerf_ -> QVP -> QVPS ;            neg  aux  head            VerbForm=Part
+NPastAQVPS_ : Neg_ -> PaPerf_ -> QVP -> QVPS ;            neg  aux  head            VerbForm=Part
+NFutAQVPS_  : Neg_ -> FuPerf_ -> Fut_ -> QVP -> QVPS ;    neg  aux  aux  head       VerbForm=Part
+NCondAQVPS_ : Neg_ -> FuPerf_ -> Cond_ -> QVP -> QVPS ;   neg  aux  aux  head       VerbForm=Part
+PPresSQVPS_ qvp         = MkQVPS (TTAnt TPres ASimul) PPos qvp
+PPastSQVPS_ qvp         = MkQVPS (TTAnt TPast ASimul) PPos qvp
+PFutSQVPS_  tf qvp      = MkQVPS (TTAnt TFut  ASimul) PPos qvp
+PCondSQVPS_ tc qvp      = MkQVPS (TTAnt TCond ASimul) PPos qvp
+PPresAQVPS_ at qvp      = MkQVPS (TTAnt TPres AAnter) PPos qvp
+PPastAQVPS_ at qvp      = MkQVPS (TTAnt TPast AAnter) PPos qvp
+PFutAQVPS_  at tf qvp   = MkQVPS (TTAnt TFut  AAnter) PPos qvp
+PCondAQVPS_ at tc qvp   = MkQVPS (TTAnt TCond AAnter) PPos qvp
+NPresSQVPS_ p qvp       = MkQVPS (TTAnt TPres ASimul) PNeg qvp
+NPastSQVPS_ p qvp       = MkQVPS (TTAnt TPast ASimul) PNeg qvp
+NFutSQVPS_  p tf qvp    = MkQVPS (TTAnt TFut  ASimul) PNeg qvp
+NCondSQVPS_ p tc qvp    = MkQVPS (TTAnt TCond ASimul) PNeg qvp
+NPresAQVPS_ p at qvp    = MkQVPS (TTAnt TPres AAnter) PNeg qvp
+NPastAQVPS_ p at qvp    = MkQVPS (TTAnt TPast AAnter) PNeg qvp
+NFutAQVPS_  p at tf qvp = MkQVPS (TTAnt TFut  AAnter) PNeg qvp
+NCondAQVPS_ p at tc qvp = MkQVPS (TTAnt TCond AAnter) PNeg qvp
+
+-++ SSlash phrases  (to be verified)
+
+----PPresSSSlash_ : NP -> VPSlash -> SSlash ;                               nsubj  head                      VerbForm=Fin   Tense=Pres
+----PPastSSSlash_ : NP -> VPSlash -> SSlash ;                               nsubj  head                      VerbForm=Fin   Tense=Past
+----PFutSSSlash_  : Fut_ -> NP -> VPSlash -> SSlash ;                       aux  nsubj  head                 VerbForm=Inf
+----PCondSSSlash_ : Cond_ -> NP -> VPSlash -> SSlash ;                      aux  nsubj  head                 VerbForm=Inf
+----PPresASSlash_ : PrPerf_ -> NP -> VPSlash -> SSlash ;                    aux  nsubj  head                 VerbForm=Part
+----PPastASSlash_ : PaPerf_ -> NP -> VPSlash -> SSlash ;                    aux  nsubj  head                 VerbForm=Part
+----PFutASSlash_  : FuPerf_ -> Fut_ -> NP -> VPSlash -> SSlash ;            aux  aux  nsubj  head            VerbForm=Part
+----PCondASSlash_ : FuPerf_ -> Cond_ -> NP -> VPSlash -> SSlash ;           aux  aux  nsubj  head            VerbForm=Part
+----NPresSSSlash_ : Neg_ -> NP -> VPSlash -> SSlash ;                       neg  nsubj  head                 VerbForm=Fin   Tense=Pres
+----NPastSSSlash_ : Neg_ -> NP -> VPSlash -> SSlash ;                       neg  nsubj  head                 VerbForm=Fin   Tense=Past
+----NFutSSSlash_  : Neg_ -> Fut_ -> NP -> VPSlash -> SSlash ;               neg  aux  nsubj  head            VerbForm=Inf
+----NCondSSSlash_ : Neg_ -> Cond_ -> NP -> VPSlash -> SSlash ;              neg  aux  nsubj  head            VerbForm=Inf
+----NPresASSlash_ : Neg_ -> PrPerf_ -> NP -> VPSlash -> SSlash ;            neg  aux  nsubj  head            VerbForm=Part
+----NPastASSlash_ : Neg_ -> PaPerf_ -> NP -> VPSlash -> SSlash ;            neg  aux  nsubj  head            VerbForm=Part
+----NFutASSlash_  : Neg_ -> FuPerf_ -> Fut_ -> NP -> VPSlash -> SSlash ;    neg  aux  aux  nsubj  head       VerbForm=Part
+----NCondASSlash_ : Neg_ -> FuPerf_ -> Cond_ -> NP -> VPSlash -> SSlash ;   neg  aux  aux  nsubj  head       VerbForm=Part
+----PPresSSSlash_ np vpslash         = SlashVPS (TTAnt TPres ASimul) PPos np vpslash
+----PPastSSSlash_ np vpslash         = SlashVPS (TTAnt TPast ASimul) PPos np vpslash
+----PFutSSSlash_  tf np vpslash      = SlashVPS (TTAnt TFut  ASimul) PPos np vpslash
+----PCondSSSlash_ tc np vpslash      = SlashVPS (TTAnt TCond ASimul) PPos np vpslash
+----PPresASSlash_ at np vpslash      = SlashVPS (TTAnt TPres AAnter) PPos np vpslash
+----PPastASSlash_ at np vpslash      = SlashVPS (TTAnt TPast AAnter) PPos np vpslash
+----PFutASSlash_  at tf np vpslash   = SlashVPS (TTAnt TFut  AAnter) PPos np vpslash
+----PCondASSlash_ at tc np vpslash   = SlashVPS (TTAnt TCond AAnter) PPos np vpslash
+----NPresSSSlash_ p np vpslash       = SlashVPS (TTAnt TPres ASimul) PNeg np vpslash
+----NPastSSSlash_ p np vpslash       = SlashVPS (TTAnt TPast ASimul) PNeg np vpslash
+----NFutSSSlash_  p tf np vpslash    = SlashVPS (TTAnt TFut  ASimul) PNeg np vpslash
+----NCondSSSlash_ p tc np vpslash    = SlashVPS (TTAnt TCond ASimul) PNeg np vpslash
+----NPresASSlash_ p at np vpslash    = SlashVPS (TTAnt TPres AAnter) PNeg np vpslash
+----NPastASSlash_ p at np vpslash    = SlashVPS (TTAnt TPast AAnter) PNeg np vpslash
+----NFutASSlash_  p at tf np vpslash = SlashVPS (TTAnt TFut  AAnter) PNeg np vpslash
+----NCondASSlash_ p at tc np vpslash = SlashVPS (TTAnt TCond AAnter) PNeg np vpslash
+
+-++ If these do not match, likely it is a Gerund
+
+GerundAdv  : VP -> Adv  ;                                VerbForm=Ger
+GerundNP   : VP -> NP   ;                                VerbForm=Ger               
+GerundNP   : VP -> NP   ;                                VerbForm=Part  Tense=Pres    -- this is most likely wrong; better to maybe remove it.
+GerundAdv_ : GerCop_ -> Comp -> Adv ;     cop  head
+GerundNP_  : GerCop_ -> Comp -> NP  ;     cop  head
+GerundAdv_ _ c = GerundAdv (UseComp c)
+GerundNP_  _ c = GerundNP  (UseComp c)
+
+
+-+  Tense and Polarity for Copula constructions
+
+UseComp_ : FuCop_ -> Comp -> VP ;  cop head 
+UseComp_ v c = UseComp c
+----QuestIComp_ : FuCop_ -> IComp -> NP -> QCl ;  cop head nsubj 
+----QuestIComp_ : FuCop_ -> IComp -> NP -> QCl ;  cop head nsubj:cop 
+----QuestIComp_ v c np = QuestIComp c np
+PPrSIComp_ : PrCop_ -> IComp -> NP -> QS ;                                cop  head  nsubj
+PPrSIComp_ : PrCop_ -> IComp -> NP -> QS ;                                cop  head  nsubj:cop
+PPaSIComp_ : PaCop_ -> IComp -> NP -> QS ;                                cop  head  nsubj
+PPaSIComp_ : PaCop_ -> IComp -> NP -> QS ;                                cop  head  nsubj:cop
+PFuSIComp_ : Fut_ -> FuCop_ -> IComp -> NP -> QS ;                        aux  cop   head  nsubj
+PFuSIComp_ : Fut_ -> FuCop_ -> IComp -> NP -> QS ;                        aux  cop   head  nsubj:cop
+PCoSIComp_ : Cond_ -> FuCop_ -> IComp -> NP -> QS ;                       aux  cop   head  nsubj
+PCoSIComp_ : Cond_ -> FuCop_ -> IComp -> NP -> QS ;                       aux  cop   head  nsubj:cop
+PPrAIComp_ : PrPerf_ -> PartCop_ -> IComp -> NP -> QS ;                   aux  cop   head  nsubj
+PPrAIComp_ : PrPerf_ -> PartCop_ -> IComp -> NP -> QS ;                   aux  cop   head  nsubj:cop
+PPaAIComp_ : PaPerf_ -> PartCop_ -> IComp -> NP -> QS ;                   aux  cop   head  nsubj
+PPaAIComp_ : PaPerf_ -> PartCop_ -> IComp -> NP -> QS ;                   aux  cop   head  nsubj:cop
+PFuAIComp_ : FuPerf_ -> Fut_ -> PartCop_ -> IComp -> NP -> QS ;           aux  aux   cop   head  nsubj
+PFuAIComp_ : FuPerf_ -> Fut_ -> PartCop_ -> IComp -> NP -> QS ;           aux  aux   cop   head  nsubj:cop
+PCoAIComp_ : FuPerf_ -> Cond_ -> PartCop_ -> IComp -> NP -> QS ;          aux  aux   cop   head  nsubj
+PCoAIComp_ : FuPerf_ -> Cond_ -> PartCop_ -> IComp -> NP -> QS ;          aux  aux   cop   head  nsubj:cop
+NPrSIComp_ : Neg_ -> PrCop_ -> IComp -> NP -> QS ;                        neg  cop   head  nsubj
+NPrSIComp_ : Neg_ -> PrCop_ -> IComp -> NP -> QS ;                        neg  cop   head  nsubj:cop
+NPaSIComp_ : Neg_ -> PaCop_ -> IComp -> NP -> QS ;                        neg  cop   head  nsubj
+NPaSIComp_ : Neg_ -> PaCop_ -> IComp -> NP -> QS ;                        neg  cop   head  nsubj:cop
+NFuSIComp_ : Neg_ -> Fut_ -> FuCop_ -> IComp -> NP -> QS ;                neg  aux   cop   head  nsubj
+NFuSIComp_ : Neg_ -> Fut_ -> FuCop_ -> IComp -> NP -> QS ;                neg  aux   cop   head  nsubj:cop
+NCoSIComp_ : Neg_ -> Cond_ -> FuCop_ -> IComp -> NP -> QS ;               neg  aux   cop   head  nsubj
+NCoSIComp_ : Neg_ -> Cond_ -> FuCop_ -> IComp -> NP -> QS ;               neg  aux   cop   head  nsubj:cop
+NPrAIComp_ : Neg_ -> PrPerf_ -> PartCop_ -> IComp -> NP -> QS ;           neg  aux   cop   head  nsubj
+NPrAIComp_ : Neg_ -> PrPerf_ -> PartCop_ -> IComp -> NP -> QS ;           neg  aux   cop   head  nsubj:cop
+NPaAIComp_ : Neg_ -> PaPerf_ -> PartCop_ -> IComp -> NP -> QS ;           neg  aux   cop   head  nsubj
+NPaAIComp_ : Neg_ -> PaPerf_ -> PartCop_ -> IComp -> NP -> QS ;           neg  aux   cop   head  nsubj:cop
+NFuAIComp_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> IComp -> NP -> QS ;   neg  aux   aux   cop   head  nsubj
+NFuAIComp_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> IComp -> NP -> QS ;   neg  aux   aux   cop   head  nsubj:cop
+NCoAIComp_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> IComp -> NP -> QS ;  neg  aux   aux   cop   head  nsubj
+NCoAIComp_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> IComp -> NP -> QS ;  neg  aux   aux   cop   head  nsubj:cop
+PPrSIComp_ _ ic np         = UseQCl (TTAnt TPres ASimul) PPos (QuestIComp ic np)
+PPaSIComp_ _ ic np         = UseQCl (TTAnt TPast ASimul) PPos (QuestIComp ic np)
+PFuSIComp_ tf _ ic np      = UseQCl (TTAnt TFut  ASimul) PPos (QuestIComp ic np)
+PCoSIComp_ tc _ ic np      = UseQCl (TTAnt TCond ASimul) PPos (QuestIComp ic np)
+PPrAIComp_ at _ ic np      = UseQCl (TTAnt TPres AAnter) PPos (QuestIComp ic np)
+PPaAIComp_ at _ ic np      = UseQCl (TTAnt TPast AAnter) PPos (QuestIComp ic np)
+PFuAIComp_ at tf _ ic np   = UseQCl (TTAnt TFut  AAnter) PPos (QuestIComp ic np)
+PCoAIComp_ at tc _ ic np   = UseQCl (TTAnt TCond AAnter) PPos (QuestIComp ic np)
+NPrSIComp_ p _ ic np       = UseQCl (TTAnt TPres ASimul) PNeg (QuestIComp ic np)
+NPaSIComp_ p _ ic np       = UseQCl (TTAnt TPast ASimul) PNeg (QuestIComp ic np)
+NFuSIComp_ p tf _ ic np    = UseQCl (TTAnt TFut  ASimul) PNeg (QuestIComp ic np)
+NCoSIComp_ p tc _ ic np    = UseQCl (TTAnt TCond ASimul) PNeg (QuestIComp ic np)
+NPrAIComp_ p at _ ic np    = UseQCl (TTAnt TPres AAnter) PNeg (QuestIComp ic np)
+NPaAIComp_ p at _ ic np    = UseQCl (TTAnt TPast AAnter) PNeg (QuestIComp ic np)
+NFuAIComp_ p at tf _ ic np = UseQCl (TTAnt TFut  AAnter) PNeg (QuestIComp ic np)
+NCoAIComp_ p at tc _ ic np = UseQCl (TTAnt TCond AAnter) PNeg (QuestIComp ic np)
+
+
+---- Passive Copula constructions ?? 
+
+
+-- catch all untensed finite VP
+PosFinTenseVPS_ : VP -> VPS ;                               head               VerbForm=Fin
+NegFinTenseVPS_ : Neg_ -> VP -> VPS ;                       neg  head          VerbForm=Fin
+-- catch all untensed VP
+PosNoTenseVPS_  : VP -> VPS ;                               head               VerbForm=Inf
+NegNoTenseVPS_  : Neg_ -> VP -> VPS ;                       neg  head          VerbForm=Inf
+PosFinTenseVPS_ vp   = MkVPS (TTAnt TPres ASimul) PPos vp 
+NegFinTenseVPS_ p vp = MkVPS (TTAnt TPres ASimul) PNeg vp 
+PosNoTenseVPS_ vp    = MkVPS (TTAnt TPres ASimul) PPos vp
+NegNoTenseVPS_ p vp  = MkVPS (TTAnt TPres ASimul) PNeg vp
+
+
+
+
+
+
+-+  Idioms
+
+--ExistNP_ : BeVerb_ -> Expl_ -> NP -> Cl ; head expl nsubj 
+--ExistNP_ cop expl np = ExistNP np
+PPrSExistNP_ : PrCop_ -> Expl_ -> NP -> S ;                                head  expl  nsubj
+PPaSExistNP_ : PaCop_ -> Expl_ -> NP -> S ;                                head  expl  nsubj
+PFuSExistNP_ : Fut_ -> FuCop_ -> Expl_ -> NP -> S ;                        aux  head  expl  nsubj
+PCoSExistNP_ : Cond_ -> FuCop_ -> Expl_ -> NP -> S ;                       aux  head  expl  nsubj
+PPrAExistNP_ : PrPerf_ -> PartCop_ -> Expl_ -> NP -> S ;                   aux  head  expl  nsubj
+PPaAExistNP_ : PaPerf_ -> PartCop_ -> Expl_ -> NP -> S ;                   aux  head  expl  nsubj
+PFuAExistNP_ : FuPerf_ -> Fut_ -> PartCop_ -> Expl_ -> NP -> S ;           aux  aux  head  expl  nsubj
+PCoAExistNP_ : FuPerf_ -> Cond_ -> PartCop_ -> Expl_ -> NP -> S ;          aux  aux  head  expl  nsubj
+NPrSExistNP_ : Neg_ -> PrCop_ -> Expl_ -> NP -> S ;                        neg  head  expl  nsubj
+NPaSExistNP_ : Neg_ -> PaCop_ -> Expl_ -> NP -> S ;                        neg  head  expl  nsubj
+NFuSExistNP_ : Neg_ -> Fut_ -> FuCop_ -> Expl_ -> NP -> S ;                neg  aux  head  expl  nsubj
+NCoSExistNP_ : Neg_ -> Cond_ -> FuCop_ -> Expl_ -> NP -> S ;               neg  aux  head  expl  nsubj
+NPrAExistNP_ : Neg_ -> PrPerf_ -> PartCop_ -> Expl_ -> NP -> S ;           neg  aux  head  expl  nsubj
+NPaAExistNP_ : Neg_ -> PaPerf_ -> PartCop_ -> Expl_ -> NP -> S ;           neg  aux  head  expl  nsubj
+NFuAExistNP_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> Expl_ -> NP -> S ;   neg  aux  aux  head  expl  nsubj
+NCoAExistNP_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> Expl_ -> NP -> S ;  neg  aux  aux  head  expl  nsubj
+PPrSExistNP_ _ expl np          = UseCl (TTAnt TPres ASimul) PPos (ExistNP np)
+PPaSExistNP_ _ expl np          = UseCl (TTAnt TPast ASimul) PPos (ExistNP np)
+PFuSExistNP_ tf _ expl np       = UseCl (TTAnt TFut  ASimul) PPos (ExistNP np)
+PCoSExistNP_ tc _ expl np       = UseCl (TTAnt TCond ASimul) PPos (ExistNP np)
+PPrAExistNP_ at _ expl np       = UseCl (TTAnt TPres AAnter) PPos (ExistNP np)
+PPaAExistNP_ at _ expl np       = UseCl (TTAnt TPast AAnter) PPos (ExistNP np)
+PFuAExistNP_ at tf _ expl np    = UseCl (TTAnt TFut  AAnter) PPos (ExistNP np)
+PCoAExistNP_ at tc _ expl np    = UseCl (TTAnt TCond AAnter) PPos (ExistNP np)
+NPrSExistNP_ p _ expl np        = UseCl (TTAnt TPres ASimul) PNeg (ExistNP np)
+NPaSExistNP_ p _ expl np        = UseCl (TTAnt TPast ASimul) PNeg (ExistNP np)
+NFuSExistNP_ p tf _ expl np     = UseCl (TTAnt TFut  ASimul) PNeg (ExistNP np)
+NCoSExistNP_ p tc _ expl np     = UseCl (TTAnt TCond ASimul) PNeg (ExistNP np)
+NPrAExistNP_ p at _ expl np     = UseCl (TTAnt TPres AAnter) PNeg (ExistNP np)
+NPaAExistNP_ p at _ expl np     = UseCl (TTAnt TPast AAnter) PNeg (ExistNP np)
+NFuAExistNP_ p at tf _ expl np  = UseCl (TTAnt TFut  AAnter) PNeg (ExistNP np)
+NCoAExistNP_ p at tc _ expl np  = UseCl (TTAnt TCond AAnter) PNeg (ExistNP np)
+
+PPrSExistNPAdv_ : PrCop_ -> Expl_ -> NP -> Adv -> S ;                                head  expl  nsubj  nmod
+PPaSExistNPAdv_ : PaCop_ -> Expl_ -> NP -> Adv -> S ;                                head  expl  nsubj  nmod
+PFuSExistNPAdv_ : Fut_ -> FuCop_ -> Expl_ -> NP -> Adv -> S ;                        aux  head  expl  nsubj  nmod
+PCoSExistNPAdv_ : Cond_ -> FuCop_ -> Expl_ -> NP -> Adv -> S ;                       aux  head  expl  nsubj  nmod
+PPrAExistNPAdv_ : PrPerf_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;                   aux  head  expl  nsubj  nmod
+PPaAExistNPAdv_ : PaPerf_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;                   aux  head  expl  nsubj  nmod
+PFuAExistNPAdv_ : FuPerf_ -> Fut_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;           aux  aux  head  expl  nsubj  nmod
+PCoAExistNPAdv_ : FuPerf_ -> Cond_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;          aux  aux  head  expl  nsubj  nmod
+NPrSExistNPAdv_ : Neg_ -> PrCop_ -> Expl_ -> NP -> Adv -> S ;                        neg  head  expl  nsubj  nmod
+NPaSExistNPAdv_ : Neg_ -> PaCop_ -> Expl_ -> NP -> Adv -> S ;                        neg  head  expl  nsubj  nmod
+NFuSExistNPAdv_ : Neg_ -> Fut_ -> FuCop_ -> Expl_ -> NP -> Adv -> S ;                neg  aux  head  expl  nsubj  nmod
+NCoSExistNPAdv_ : Neg_ -> Cond_ -> FuCop_ -> Expl_ -> NP -> Adv -> S ;               neg  aux  head  expl  nsubj  nmod
+NPrAExistNPAdv_ : Neg_ -> PrPerf_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;           neg  aux  head  expl  nsubj  nmod
+NPaAExistNPAdv_ : Neg_ -> PaPerf_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;           neg  aux  head  expl  nsubj  nmod
+NFuAExistNPAdv_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;   neg  aux  aux  head  expl  nsubj  nmod
+NCoAExistNPAdv_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> Expl_ -> NP -> Adv -> S ;  neg  aux  aux  head  expl  nsubj  nmod
+PPrSExistNPAdv_ _ expl np adv          = UseCl (TTAnt TPres ASimul) PPos (ExistNPAdv np adv)
+PPaSExistNPAdv_ _ expl np adv          = UseCl (TTAnt TPast ASimul) PPos (ExistNPAdv np adv)
+PFuSExistNPAdv_ tf _ expl np adv       = UseCl (TTAnt TFut  ASimul) PPos (ExistNPAdv np adv)
+PCoSExistNPAdv_ tc _ expl np adv       = UseCl (TTAnt TCond ASimul) PPos (ExistNPAdv np adv)
+PPrAExistNPAdv_ at _ expl np adv       = UseCl (TTAnt TPres AAnter) PPos (ExistNPAdv np adv)
+PPaAExistNPAdv_ at _ expl np adv       = UseCl (TTAnt TPast AAnter) PPos (ExistNPAdv np adv)
+PFuAExistNPAdv_ at tf _ expl np adv    = UseCl (TTAnt TFut  AAnter) PPos (ExistNPAdv np adv)
+PCoAExistNPAdv_ at tc _ expl np adv    = UseCl (TTAnt TCond AAnter) PPos (ExistNPAdv np adv)
+NPrSExistNPAdv_ p _ expl np adv        = UseCl (TTAnt TPres ASimul) PNeg (ExistNPAdv np adv)
+NPaSExistNPAdv_ p _ expl np adv        = UseCl (TTAnt TPast ASimul) PNeg (ExistNPAdv np adv)
+NFuSExistNPAdv_ p tf _ expl np adv     = UseCl (TTAnt TFut  ASimul) PNeg (ExistNPAdv np adv)
+NCoSExistNPAdv_ p tc _ expl np adv     = UseCl (TTAnt TCond ASimul) PNeg (ExistNPAdv np adv)
+NPrAExistNPAdv_ p at _ expl np adv     = UseCl (TTAnt TPres AAnter) PNeg (ExistNPAdv np adv)
+NPaAExistNPAdv_ p at _ expl np adv     = UseCl (TTAnt TPast AAnter) PNeg (ExistNPAdv np adv)
+NFuAExistNPAdv_ p at tf _ expl np adv  = UseCl (TTAnt TFut  AAnter) PNeg (ExistNPAdv np adv)
+NCoAExistNPAdv_ p at tc _ expl np adv  = UseCl (TTAnt TCond AAnter) PNeg (ExistNPAdv np adv)
+
+
+-- These constructions do not work when interacting with modal verbs
+-- "It can be an angry man that attacked this place"
+PPrSCleftNP_ : PrCop_ -> Cleft_ -> NP -> RS -> S ;                                  cop  expl head acl:relcl
+PPaSCleftNP_ : PaCop_ -> Cleft_ -> NP -> RS -> S ;                                  cop  expl head acl:relcl
+PFuSCleftNP_ : Fut_ -> FuCop_ -> Cleft_ -> NP -> RS -> S ;                          aux  cop  expl head acl:relcl
+PCoSCleftNP_ : Cond_ -> FuCop_ -> Cleft_ -> NP -> RS -> S ;                         aux  cop  expl head acl:relcl
+PPrACleftNP_ : PrPerf_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;                     aux  cop  expl head acl:relcl
+PPaACleftNP_ : PaPerf_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;                     aux  cop  expl head acl:relcl
+PFuACleftNP_ : FuPerf_ -> Fut_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;             aux  aux  cop  expl head  acl:relcl
+PCoACleftNP_ : FuPerf_ -> Cond_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;            aux  aux  cop  expl head  acl:relcl
+NPrSCleftNP_ : Neg_ -> PrCop_ -> Cleft_ -> NP -> RS -> S ;                          neg  cop  expl head acl:relcl
+NPaSCleftNP_ : Neg_ -> PaCop_ -> Cleft_ -> NP -> RS -> S ;                          neg  cop  expl head acl:relcl
+NFuSCleftNP_ : Neg_ -> Fut_ -> FuCop_ -> Cleft_ -> NP -> RS -> S ;                  neg  aux  cop  expl head  acl:relcl
+NCoSCleftNP_ : Neg_ -> Cond_ -> FuCop_ -> Cleft_ -> NP -> RS -> S ;                 neg  aux  cop  expl head  acl:relcl
+NPrACleftNP_ : Neg_ -> PrPerf_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;             neg  aux  cop  expl head  acl:relcl
+NPaACleftNP_ : Neg_ -> PaPerf_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;             neg  aux  cop  expl head  acl:relcl
+NFuACleftNP_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;     neg  aux  aux  cop  expl  head  acl:relcl
+NCoACleftNP_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> Cleft_ -> NP -> RS -> S ;    neg  aux  aux  cop  expl  head  acl:relcl
+PPrSCleftNP_ _ cleft np rs           = UseCl (TTAnt TPres ASimul) PPos (CleftNP np rs)
+PPaSCleftNP_ _ cleft np rs           = UseCl (TTAnt TPast ASimul) PPos (CleftNP np rs)
+PFuSCleftNP_ tf _ cleft np rs        = UseCl (TTAnt TFut  ASimul) PPos (CleftNP np rs)
+PCoSCleftNP_ tc _ cleft np rs        = UseCl (TTAnt TCond ASimul) PPos (CleftNP np rs)
+PPrACleftNP_ at _ cleft np rs        = UseCl (TTAnt TPres AAnter) PPos (CleftNP np rs)
+PPaACleftNP_ at _ cleft np rs        = UseCl (TTAnt TPast AAnter) PPos (CleftNP np rs)
+PFuACleftNP_ at tf _ cleft np rs     = UseCl (TTAnt TFut  AAnter) PPos (CleftNP np rs)
+PCoACleftNP_ at tc _ cleft np rs     = UseCl (TTAnt TCond AAnter) PPos (CleftNP np rs)
+NPrSCleftNP_ p _ cleft np rs         = UseCl (TTAnt TPres ASimul) PNeg (CleftNP np rs)
+NPaSCleftNP_ p _ cleft np rs         = UseCl (TTAnt TPast ASimul) PNeg (CleftNP np rs)
+NFuSCleftNP_ p tf _ cleft np rs      = UseCl (TTAnt TFut  ASimul) PNeg (CleftNP np rs)
+NCoSCleftNP_ p tc _ cleft np rs      = UseCl (TTAnt TCond ASimul) PNeg (CleftNP np rs)
+NPrACleftNP_ p at _ cleft np rs      = UseCl (TTAnt TPres AAnter) PNeg (CleftNP np rs)
+NPaACleftNP_ p at _ cleft np rs      = UseCl (TTAnt TPast AAnter) PNeg (CleftNP np rs)
+NFuACleftNP_ p at tf _ cleft np rs   = UseCl (TTAnt TFut  AAnter) PNeg (CleftNP np rs)
+NCoACleftNP_ p at tc _ cleft np rs   = UseCl (TTAnt TCond AAnter) PNeg (CleftNP np rs)
+
+ExplPredSCVPSC_ : Cleft_ -> SC -> VPS -> S ;       expl  csubj      head
+ExplPredSCVPSC_ : Cleft_ -> SC -> VPS -> S ;       expl  csubj:cop  head
+ExplPredSCVPSC_ : Cleft_ -> SC -> VPS -> S ;       expl  csubjpass  head
+ExplPredSCVPS_  : Cleft_ -> S -> VPS -> S  ;       expl  csubj      head
+ExplPredSCVPS_  : Cleft_ -> S -> VPS -> S  ;       expl  csubj:cop  head
+ExplPredSCVPS_  : Cleft_ -> S -> VPS -> S  ;       expl  csubjpass  head
+ExplPredSCVPSC_ cleft sc vps = ExplPredSCVPS sc vps
+ExplPredSCVPS_  cleft s  vps = ExplPredSCVPS (EmbedS s) vps
+
+PPrSImpersCl_ : PrCop_ -> Cleft_ -> VP -> S ;                                      cop  expl head
+PPaSImpersCl_ : PaCop_ -> Cleft_ -> VP -> S ;                                      cop  expl head
+PFuSImpersCl_ : Fut_ -> FuCop_ -> Cleft_ -> VP -> S ;                              aux  cop  expl  head
+PCoSImpersCl_ : Cond_ -> FuCop_ -> Cleft_ -> VP -> S ;                             aux  cop  expl  head
+PPrAImpersCl_ : PrPerf_ -> PartCop_ -> Cleft_ -> VP -> S ;                         aux  cop  expl  head
+PPaAImpersCl_ : PaPerf_ -> PartCop_ -> Cleft_ -> VP -> S ;                         aux  cop  expl  head
+PFuAImpersCl_ : FuPerf_ -> Fut_ -> PartCop_ -> Cleft_ -> VP -> S ;                 aux  aux  cop   expl  head
+PCoAImpersCl_ : FuPerf_ -> Cond_ -> PartCop_ -> Cleft_ -> VP -> S ;                aux  aux  cop   expl  head
+NPrSImpersCl_ : Neg_ -> PrCop_ -> Cleft_ -> VP -> S ;                              neg  cop  expl  head
+NPaSImpersCl_ : Neg_ -> PaCop_ -> Cleft_ -> VP -> S ;                              neg  cop  expl  head
+NFuSImpersCl_ : Neg_ -> Fut_ -> FuCop_ -> Cleft_ -> VP -> S ;                      neg  aux  cop  expl  head
+NCoSImpersCl_ : Neg_ -> Cond_ -> FuCop_ -> Cleft_ -> VP -> S ;                     neg  aux  cop  expl  head
+NPrAImpersCl_ : Neg_ -> PrPerf_ -> PartCop_ -> Cleft_ -> VP -> S ;                 neg  aux  cop  expl  head
+NPaAImpersCl_ : Neg_ -> PaPerf_ -> PartCop_ -> Cleft_ -> VP -> S ;                 neg  aux  cop  expl  head
+NFuAImpersCl_ : Neg_ -> FuPerf_ -> Fut_ -> PartCop_ -> Cleft_ -> VP -> S ;         neg  aux  aux  cop   expl  head
+NCoAImpersCl_ : Neg_ -> FuPerf_ -> Cond_ -> PartCop_ -> Cleft_ -> VP -> S ;        neg  aux  aux  cop   expl  head
+PPrSImpersCl_ _ cleft vp           = UseCl (TTAnt TPres ASimul) PPos (ImpersCl vp)
+PPaSImpersCl_ _ cleft vp           = UseCl (TTAnt TPast ASimul) PPos (ImpersCl vp)
+PFuSImpersCl_ tf _ cleft vp        = UseCl (TTAnt TFut  ASimul) PPos (ImpersCl vp)
+PCoSImpersCl_ tc _ cleft vp        = UseCl (TTAnt TCond ASimul) PPos (ImpersCl vp)
+PPrAImpersCl_ at _ cleft vp        = UseCl (TTAnt TPres AAnter) PPos (ImpersCl vp)
+PPaAImpersCl_ at _ cleft vp        = UseCl (TTAnt TPast AAnter) PPos (ImpersCl vp)
+PFuAImpersCl_ at tf _ cleft vp     = UseCl (TTAnt TFut  AAnter) PPos (ImpersCl vp)
+PCoAImpersCl_ at tc _ cleft vp     = UseCl (TTAnt TCond AAnter) PPos (ImpersCl vp)
+NPrSImpersCl_ p _ cleft vp         = UseCl (TTAnt TPres ASimul) PNeg (ImpersCl vp)
+NPaSImpersCl_ p _ cleft vp         = UseCl (TTAnt TPast ASimul) PNeg (ImpersCl vp)
+NFuSImpersCl_ p tf _ cleft vp      = UseCl (TTAnt TFut  ASimul) PNeg (ImpersCl vp)
+NCoSImpersCl_ p tc _ cleft vp      = UseCl (TTAnt TCond ASimul) PNeg (ImpersCl vp)
+NPrAImpersCl_ p at _ cleft vp      = UseCl (TTAnt TPres AAnter) PNeg (ImpersCl vp)
+NPaAImpersCl_ p at _ cleft vp      = UseCl (TTAnt TPast AAnter) PNeg (ImpersCl vp)
+NFuAImpersCl_ p at tf _ cleft vp   = UseCl (TTAnt TFut  AAnter) PNeg (ImpersCl vp)
+NCoAImpersCl_ p at tc _ cleft vp   = UseCl (TTAnt TCond AAnter) PNeg (ImpersCl vp)
+
+---ImpersS
+---GenericS
+
+
+
+
+

@@ -26,32 +26,58 @@ mapTree f (T n ts) = T (f n) (map (mapTree f) ts)
 sizeTree :: Tree n -> Int
 sizeTree (T _ ts) = 1 + sum (map sizeTree ts)
 
-type MorphoTags = String ---- [(String,String)],
+type MorphoTags = [(String,String)]   -- String 
+-- changed on 2017/09/01
+-- also changed hasMorpho, hasLemma, hasTagandMorpho functions
+-- switched from plain string to list of tuples
 
 data DepNode = DN {
-  lemma    :: String,
-  label    :: Label,
-  postag   :: POS,
-  morpho   :: MorphoTags,
-  word     :: String,
-  position :: Int,
   source   :: Int,
-  status   :: String
+  word     :: String,
+  lemma    :: String,
+  postag   :: POS,
+  xpostag  :: POS,             -- added later. helpful for use in PrepocUD.hs
+  morpho   :: MorphoTags,
+  position :: Int,
+  label    :: Label,
+  extdeps  :: String,
+  misc     :: String,          -- called in CoNLL-U as misc 
+  status   :: String          
   } deriving (Show,Eq,Ord)
 
 initDepNode :: DepNode
-initDepNode = DN "" "" "" [] "" 0 0 ""
-  
+initDepNode = DN 0 "" "" "" "" [] 0 "" "" "" ""
+
 type DepTree = Tree DepNode
 
+-- Read the morph feature string and return 
+-- MorphoTags / [MorphoConstraints]
+morph2fs :: String -> MorphoTags
+morph2fs morph = case break (=='|') morph of
+  ("_","")      -> []
+  (feat,"")     -> mf2mc feat : []
+  (feat,_:rest) -> mf2mc feat : morph2fs rest
+  where 
+    mf2mc mf = case break (=='=') mf of
+     (fn, '=':fv) -> (fn, fv)
+     (fn, "")     -> (fn, "")
+
+fs2morph :: MorphoTags -> String
+fs2morph feats = case feats of 
+  []      -> "_"
+  (f,v):rest  -> concat . intersperse "|" $ map (\(x,y) -> x++"="++y) $ (f,v):rest
+
 row2depnode :: [String] -> DepNode
-row2depnode (positio:wor:lemm:posta:_:morph:sourc:labe:_) =
-  initDepNode {
-    lemma=lemm, label=labe, postag=posta, word=wor,
+row2depnode (positio:wor:lemm:posta:xpos:morph:sourc:labe:edep:mis:_) =
+  initDepNode {word=wor,lemma=lemm,postag=posta, 
     position = read positio,
+    xpostag = xpos,          -- fine-grained POS
+    morpho = morph2fs morph,
     source = read sourc,
-    morpho = morph
-    }
+    label = labe,
+    extdeps = edep,
+    misc = mis            -- comments no longer ignored
+  }
 
 depnodes2tree :: [DepNode] -> DepTree
 depnodes2tree dns = c2t root where 
@@ -75,18 +101,18 @@ prTreeShort prn (T n ts) = unwords (prn n : map prt ts) where
   prt t@(T tn tns) = if (null tns) then (prn tn) else "(" ++ unwords (prn tn : map prt tns) ++ ")"
 
 prDepNode :: DepNode -> String
-prDepNode n = unwords [label n, lemma n, postag n, morpho n, show (position n), status n]
+prDepNode n = unwords [label n, lemma n, postag n, fs2morph (morpho n), show (position n), status n]
 
-type Fun = String
-type Cat = String
-type Var = String -- used in DefMap
+type Fun   = String
+type Cat   = String
+type Var   = String     -- used in DefMap
 type Label = String
-type POS = String
-type Lang = String --- should no more be needed except in lexicon lookup
+type POS   = String
+type Lang  = String     -- should no more be needed except in lexicon lookup
 
 data GFNode = GN {
-  fun  :: Fun,        -- GF function
-  src  :: Int         -- the source word, default 0; used for counting coverage
+  fun  :: Fun,          -- GF function
+  src  :: Int           -- the source word, default 0; used for counting coverage
   } deriving (Show,Eq,Ord)
 
 type GFTree = Tree GFNode
@@ -100,29 +126,38 @@ prGFTree = prTreeShort prGFNode
 prGFTreeLong = unlines . prt 0 where
   prt i (T n ts)
     | all (null . children) ts =
-        [replicate i ' ' ++ unwords (prGFNode n : map (prGFNode . root) ts)] -- 1 line if all args are atomic
+        [replicate i ' ' ++ unwords (prGFNode n : map (prGFNode . root) ts)]    -- 1 line if all args are atomic
     | otherwise = (replicate i ' ' ++ prGFNode n) : concatMap (prt (i + 4)) ts
 
 prGFNode n = fun n
 
+-- rename [GFTree] as BackT (useful when adding backup trees for other gf tree candidates)
+type BackT = [GFTree]
+
+-- added backcands for each treecand  on 2017/05/03
 data AbsNode = AN {
   gftree    :: GFTree,         -- the tree constructed; must always be a valid GF tree
   cat       :: Cat,            -- the type of this tree
   lab       :: Label,          -- original label, used in intermediate phases
   treecands :: [(GFTree,Cat)], -- local subtree candidates ---- used for lexical items only
-  backtrees :: [GFTree],       -- collection of unused nodes, if any 
+  backtrees :: BackT,          -- collection of unused nodes for the top GF tree, if any 
+  backcands :: [BackT],        -- collection of unused nodes for the rest of GF candidates
   tags      :: MorphoTags,     -- morphological tags
-  udtag     :: POS, 
+  udtag     :: POS,            -- UD tag. helpful for OOV word handling. Otherwise, not used
+  lem       :: String,         -- lemma helpful for handling lexicalized configs 
   positio   :: Int             --- 0 for non-lexical functions
   } deriving (Show,Eq,Ord)
 
 initAbsNode :: AbsNode
-initAbsNode = AN initGFTree "String" "backup" [] [] "" "" 0
+initAbsNode = AN initGFTree "String" "dep" [] [] [] [] "" "" 0   -- rename backup label to dep label to match gf2ud
 
 type AbsTree = Tree AbsNode
 
 -- add the actually 1-ranked tree to the other candidates
 allTreecands an = (gftree an, cat an) : treecands an
+
+-- retrive all the backups GF trees for the respective candidate trees
+allBackcands an = backtrees an : backcands an
 
 cnstf f i    = initGFNode {fun=f,src=i}
 cnst f i     = T (cnstf f i) []
@@ -143,7 +178,7 @@ prAbsNode n = unwords [
   prGFTree (gftree n) ++ " : " ++ cat n,
   prTreecands (treecands n),
   prBacktrees (backtrees n),
-  prCoveredNodes (gftree n),
+  prCoveredNodes (gftree n),   -- added 2017/04/26 
   show (positio n)
   ]
 
@@ -153,11 +188,15 @@ prCoveredNodes t = "(" ++ concat (intersperse ","  [show n | n <- nub $ nodesUse
 
 prTreecands cs = "[" ++ concat (intersperse ", " [prGFTree t ++ " : " ++ c | (t,c) <- cs]) ++ "]"
 
-sortByNodesUsed :: [AbsTree] -> [AbsTree]
+sortByNodesUsed    :: [AbsTree] -> [AbsTree]
 sortByNodesUsed ts = map snd $ reverse $ sort [(length (nodesUsedGen positio t),t) | t <- ts]
 
-sortByNodesUnUsed :: Int -> [AbsTree] -> [AbsTree]
+-- depreceated. 
+sortByNodesUnUsed  :: Int -> [AbsTree] -> [AbsTree]
 sortByNodesUnUsed n ts = map snd $ sort [(n - (length (nodesUsedGen positio t)),t) | t <- ts]
+
+-- sortByNodesCovered :: [GFTree] -> [GFTree]
+-- sortByNodesCovered ts = map snd $ reverse $ sort [(length (nodesUsedGen src t),t) | t <- ts]
 
 nodesUsedGen :: (n -> Int) -> Tree n -> [Int]
 nodesUsedGen posi ast = nub (nus ast) where
@@ -175,6 +214,7 @@ dep2absNode d = initAbsNode {
   lab = label d,
   tags = morpho d,
   udtag = postag d,
+  lem = lemma d,
   positio = position d
   }
 
@@ -191,13 +231,13 @@ deptree2abstreeLex config dict dt@(T dn dts) = T (annot dn) (map annots dts) whe
     (gft,gfc) = head cands
   
     cands0 = lookLex (lemma d) (postag d) (position d) (morpho d)
-    cands1 = cands0 ++ [(gftree absnode0, cat absnode0)] -- keep initial String as backup candidate
-    cands2 = case filter ((/="String") . snd) cands1 of  -- remove String candidates if there are others
-               cs@(_:_) -> cs                            --- note: a String can sometimes be right,
+    cands1 = cands0 ++ [(gftree absnode0, cat absnode0)]                       -- keep initial String as backup candidate
+    cands2 = case filter ((/="String") . snd) cands1 of                        -- remove String candidates if there are others
+               cs@(_:_) -> cs                                                  --- note: a String can sometimes be right,
                _ -> case coverOOV (head cands1) (postag d) (position d) (morpho d) of  --- e.g. when a word is taken literally or is missing from lexicon
                       cs@(_:_) -> cs
                       _ -> cands1 
-               -- _ -> cands1                            --- e.g. when a word is taken literally as a name
+               -- _ -> cands1                                                  --- e.g. when a word is taken literally as a name
     cands  = nub cands2
 
   udCatMap = categories config
@@ -205,30 +245,35 @@ deptree2abstreeLex config dict dt@(T dn dts) = T (annot dn) (map annots dts) whe
   -- lexicon lookup for a lemma with certain POS and morphological tags                
   lookLex lem pos i mor = concat $ maybe [] (map (mkLex lem i)) $ do -- this "do" block returns Maybe [(Cat,[Fun])]
   
-    cis <- M.lookup pos udCatMap   -- find categories compatible with POS, with morpho and lemma constraints
+    cis <- M.lookup pos udCatMap                                               -- find categories compatible with POS, 
+                                                                               -- with morpho and lemma constraints
     
-    let cs = [catid ci |           -- filter those categories that match the morphological and lemma constraints
+    let cs = [catid ci |                                                       -- filter those categories that 
+                                                                               -- match the morphological and lemma constraints
                 ci <- cis,        
-                and [hasMorpho id mc mor && hasLemma mc lem | mc <- mconstraints ci]
+                and [hasMorpho id mc mor && hasLemma mc lem | ("head",mc) <- mconstraints ci]
              ]
+    let lclem = map toLower lem 
 
-    return [(c,fs) |               -- for each such category, find the functions with this lemma and category
-      c <- cs, let fs = maybe [] id $ M.lookup (lem,c) dict
+    return [(c,fs) |                                                           -- for each such category, find the functions 
+                                                                               -- with this lemma and category
+      c <- cs, let fs = maybe [] id $ M.lookup (lclem,c) dict
       ]
 
   -- after lookup, build a set of GF trees
   mkLex lem i (c,fs) = case fs of
-    _:_ -> [(cnst f i, c) | f <- fs]         -- GF function constant with its category 
-    []  -> [(cnst (quote lem) i, "String")]  -- unknown words are kept as strings
+    _:_ -> [(cnst f i, c) | f <- fs]                                           -- GF function constant with its category 
+    []  -> [(cnst (quote lem) i, "String")]                                    -- unknown words are kept as strings
 
+  -- OOV handling. Added 2017/04/04
   coverOOV (gft,gfc) pos i mor = alltrees where
     oovFunctions = [fi | fi <- (functions config), length (argtypes fi) == 1, elem (gfc,"head") (argtypes fi)]
     oovtrees = [(tree,cv) | 
                      fi <- oovFunctions,
-                     and [hasTagandMorpho id mo pos mor | mo <- morphoconstraints fi],
+                     and [hasTagandMorpho id mo pos mor | ("head",mo) <- morphoconstraints fi],
                      let cv = valtype fi,
                      let fu = initGFNode{fun=funid fi, src=i},
-                     let tree = T fu [gft]              -- apply the function to the String argument
+                     let tree = T fu [gft]                                     -- apply the function to the String argument
                ]
     alltrees = oovtrees
 
@@ -245,45 +290,48 @@ data Configuration = Conf {
   functions      :: [FunInfo],
   backups        :: [FunInfo],
   definitions    :: DefMap,
-  helpcategories :: M.Map Cat Cat 
+  helpcategories :: M.Map Cat Cat    -- added 2017/04/06 for handling sub-categories
   } deriving Show
 
 data FunInfo = FI {
   funid    :: Fun,
   valtype  :: Cat,
   argtypes :: [(Cat,Label)],
-  morphoconstraints :: [MorphoConstraint]
+  morphoconstraints :: [LMorphoConstraint]
   } deriving (Show,Eq,Ord)
 
 data CatInfo = CI {
   catid        :: String,
-  mconstraints :: [MorphoConstraint]
+  mconstraints :: [LMorphoConstraint]
   } deriving (Show,Eq,Ord)
 
-type MorphoConstraint = String ---- give more structure
+---- switched from simple string to tuple
+type MorphoConstraint  = (String,String) 
+---- allows for constraints like case.lemma="of"
+---- changed on 2017/10/09 
+type LMorphoConstraint = (Label,MorphoConstraint) 
 
 -- check if a morphological constraint is among the morpho tags
-hasMorpho :: (n -> String) -> MorphoConstraint -> n -> Bool
-hasMorpho mf c node
-  | take 6 c == "lemma=" = True       -- this is a lemma constraint, not morpho
-  | otherwise = isInfixOf c (mf node) ---- use structure
+hasMorpho :: (n -> MorphoTags) -> MorphoConstraint -> n -> Bool
+hasMorpho mf ("lemma",_) node = True 
+hasMorpho mf c node = elem c (mf node)
+--  | take 6 c == "lemma=" = True       -- this is a lemma constraint, not morpho
+--  | otherwise = isInfixOf c (mf node) ---- use structure
 
 -- a special case is constraint of form lemma=x
 hasLemma :: MorphoConstraint -> String -> Bool
-hasLemma mc s = case splitAt 6 mc of
-  ("lemma=", l) -> l==s
+hasLemma (mf,mv) lemma = case mf of
+  "lemma" -> lemma == mv
   _ -> True
 
+-- added 2017/04/04
 -- check if a morphological constraint is among the morpho tags
-hasTagandMorpho :: (n -> String) -> MorphoConstraint -> POS -> n -> Bool
-hasTagandMorpho id c pos node
-  | take 6 c == "udtag=" = hasUDtag c pos
-  | otherwise = hasMorpho id c node 
-
-hasUDtag :: MorphoConstraint -> String -> Bool 
-hasUDtag mc s = case splitAt 6 mc of 
-  ("udtag=", l) -> l==s
-  _ -> True
+hasTagandMorpho :: (n -> MorphoTags) -> MorphoConstraint -> POS -> n -> Bool
+hasTagandMorpho id mc pos node = case fst mc of 
+  "udtag" -> snd mc == pos
+  _ -> hasMorpho id mc node 
+--  | take 6 c == "udtag=" = hasUDtag c pos
+--  | otherwise = hasMorpho id c node 
 
 initFunInfo = FI "" "" [] []
 initCatInfo = CI "" [] 
@@ -301,6 +349,13 @@ lexFunInfo f c = initFunInfo {funid = f, valtype = c}
 type Dictionary = M.Map (String,Cat) [Fun]  -- (word,cat) -> funs
 emptyDictionary = M.empty
 
+-- added on 2017/08/29 to handle variants if provided in an auxiliary dictionary
+mergeDictionary :: Dictionary -> Dictionary -> Dictionary
+mergeDictionary init var = M.unionWith (++) init var 
+
+-- added on 2017/11/07 to handle case-insensitive lookup
+lcDictionary :: Dictionary -> Dictionary
+lcDictionary dict = M.fromListWith (++) $ map (\ ((x,y),val) -> ((map toLower x,y),val) ) $ M.toList dict 
 ------------------------
 ---- auxiliaries
 
@@ -312,5 +367,8 @@ unlexBind s = case s of
 
 quote s = "\"" ++ s ++ "\""  ---- TODO escape
 
-
+-- only if length s >= 3. 
+unquote s       | s == "\"" = s      -- if string itself is quotes 
+unquote s@(q:w) | q == '\"' && last w == '\"' = init w 
+unquote s@(q:w) | otherwise = s
 
