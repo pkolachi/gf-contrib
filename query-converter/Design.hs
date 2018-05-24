@@ -82,10 +82,11 @@ displayER e = do
 
 -- reading a textfile
 
-file2ER file = do
-  s <- readFile file >>= return . filter (not . isPrefixOf "#") . filter (not . all isSpace) . lines
-  let er = getERDiagram s
-  displayER er
+file2ER file = displayER . parseER =<< readFile file
+
+parseER = getERDiagram .
+          filter (not . isPrefixOf "#") . filter (not . all isSpace) .
+          lines
 
 --------------------------------
 -- ER datatypes
@@ -188,7 +189,7 @@ data Relation = Rel {
 relation :: Ident -> Relation
 relation name = Rel name [] [] []
 
-type Reference = (Ident,(Ident,Ident))   -- x -> y.z
+type Reference = ([Ident],(Ident,[Ident]))   -- (a,b) -> x.(u,v)
 
 type FunDep = ([Ident],Ident)
 
@@ -199,10 +200,13 @@ prRelation :: Relation -> [String]
 prRelation r = [
   name r ++ "(" ++ concat (intersperse "," (map prAttr (attributes r))) ++ ")"
   ] ++ [
-  "  " ++ x ++ " -> " ++ y ++ "." ++ z | (x,(y,z)) <- references r
+  "  " ++ prTuple x ++ " -> " ++ y ++ "." ++ prTuple z | (x,(y,z)) <- references r
   ]
  where
    prAttr (a,b) = if b then "_" ++ a else a
+   prTuple xs = case xs of
+     [x] -> x
+     _ -> "(" ++ concat (intersperse "," xs) ++ ")"
 
 
 --------------- translate E-R to schema
@@ -217,37 +221,41 @@ erdiagram2schema sty er = map trSchema (filter (not . isFunction) er)
     trSchema e = case e of
       EEntity (EWeak strongrels) name attrs -> (relation name){
         attributes = attrs ++ [(ifqualif strongrels rel (qualif strong k), True)       | (strong,rel) <- strongrels, k <- keys strong],
-        references =          [(ifqualif strongrels rel (qualif strong k), (strong,k)) | (strong,rel) <- strongrels, k <- keys strong]
+        references =          [(map (ifqualif strongrels rel . (qualif strong)) ks, (strong,ks)) | (strong,rel) <- strongrels, let ks = keys strong]
         }
       EEntity EStrong name attrs -> 
-          let exacts = [(k,b) | fab@(f,(a,b)) <- functions, a == name, k <- keys b] 
+          let exacts = [(ks,b) | fab@(f,(a,b)) <- functions, a == name, let ks = keys b] 
           in (relation name){
         attributes = attrs ++ 
-                     [(qualif b k,False) | (k,b) <- exacts],
-        references = [(qualif b k,(b,k)) | (k,b) <- exacts]
+                     [(qualif b k,False) | (ks,b) <- exacts, k <- ks],
+        references = [(map (qualif b) ks,(b,ks)) | (ks,b) <- exacts]
         }
       ESubEntity strength name y attrs -> case sty of
         _ -> let kys = keys y in
              (relation name){
                attributes = [(k,True) | k <- kys] ++ [(a,False) | a <- attrs],
-               references = [(k,(y,k)) | k <- kys]
+               references = [(kys,(y,kys))]
                } ---- just er style
       ERelationship name ents attrs -> (relation name){
-        attributes = [(mqualif mi e k,status arr)  | (e,(arr,mi)) <- ents, k <- keys e] ++ [(a,False) | a <- attrs],
-        references = [(mqualif mi e k,(e,k))       | (e,(arr,mi)) <- ents, k <- keys e]
+        attributes = [(mqualif ents n mi e k,status arr)  | ((e,(arr,mi)),n) <- zip ents [1..], k <- keys e] ++ [(a,False) | a <- attrs],
+        references = [(map (mqualif ents n mi e) ks,(e,ks))       | ((e,(arr,mi)),n) <- zip ents [1..], let ks = keys e]
         }
     keys y = case lookup y entitiesWithKeys of
       Just (e,ks) -> case e of
-         EEntity (EWeak strongrels) _ _ -> ks ++ [qualif strong k | (strong,rel) <- strongrels, k <- keys strong] 
+         EEntity (EWeak strongrels) _ _ -> ks ++ [qualif strong k | (strong,rel) <- strongrels, k <- keys strong]
+         ESubEntity _ sube supe attrs   -> keys supe
          _ -> ks
       _ -> error $ "entity " ++ y ++ " not found"
     entitiesWithKeys = [(r,(e,[k | (k,True) <- attrs])) | e@(EEntity _ r attrs) <- er] ++
                        [(r,(e,[])) | e@(ESubEntity _ r _ attrs) <- er]
     qualif (e:es) (k:ks) = toLower e : es ++ [toUpper k] ++ ks
     ifqualif rs r = if length rs > 1 then qualif r else id
-    mqualif mi e k = case mi of
+    mqualif ents n mi e k = case mi of
       Just i -> qualif i k
-      _ -> qualif e k  
+      _ -> case [ent | (ent,_) <- ents, ent==e] of
+        _:_:_ -> qualif e (qualif k (show n))
+        _ -> qualif e k
+      
     functions = [(f,(a,b)) | ERelationship f abs _ <- er, (a,_) <- abs, (b,(EExactlyOne,_)) <- abs, a/=b] ---- attrs? 
 ----    functions = [(f,(a,b)) | ERelationship f [(a,_), (b,(EExactlyOne,_))] _ <- er] ---- attrs? many-place?
     isFunction e = case e of
@@ -256,6 +264,23 @@ erdiagram2schema sty er = map trSchema (filter (not . isFunction) er)
     status arr = case arr of
       EMany -> True
       _ -> False -- no need to use uniquely determined attribute as key
+
+{-
+data ERElement = 
+    EEntity EStrength Ident [(Ident,Bool)]                      -- entity name, [attributes; True if key]
+  | ERelationship Ident [(Ident,(EArrow,Maybe Ident))] [Ident]  -- rel name, entity names, arrow names, attrs
+  | ESubEntity EStrength Ident Ident [Ident]                    -- ISA relation
+  -- strong/weak, rel name, [entity,arrow type arrow label], [attribute]
+
+data EArrow =
+    EMany
+  | EAtMostOne
+  | EExactlyOne
+
+data EStrength =
+    EStrong
+  | EWeak [(Ident,Ident)] -- weak depending on a number of stronerg ones by weak relationships
+-}
 
 data Style = SER | SOO | SNull
 

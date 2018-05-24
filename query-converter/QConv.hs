@@ -4,25 +4,22 @@ import SQLCompiler ---- Converter
 import Algebra
 import OptimizeAlgebra
 import Design (file2ER)
-import Fundep (prRelationInfo,pRelation,prRelation,normalizeBCNF,normalize3NF,normalize4NF)
+import Fundep (prRelationInfo,pRelation,prNormalizations)
 import Relation2XML (env2document)
 import AbsXML
 import XPath (execXPath)
 import ValidateXML
 
-import LexMinSQL
-import ParMinSQL
-import PrintMinSQL
-import AbsMinSQL
+import MinSQL
 
 import ErrM
 import Viewer
 
-import System.IO ( stdin, stdout, hFlush, hGetContents )
-import System.Environment ( getArgs, getProgName )
-import System.Exit ( exitFailure, exitSuccess )
+import System.IO ( stdout, hFlush) -- , stdin, hGetContents
+--import System.Environment ( getArgs, getProgName )
+--import System.Exit ( exitFailure, exitSuccess )
 import System.Process
-import Data.Char
+--import Data.Char
 
 main = do
   putStrLn helpMsg
@@ -48,23 +45,21 @@ loop env@(senv, xmls) = do
       file2ER file
       loop env
     "f":file:_ -> do
-      rel <- readFile file >>= return . pRelation . lines
-      putStrLn $ prRelationInfo rel
+      rs <- readFile file >>= return . lines
+      case pRelation rs of
+        Left  rel -> putStrLn $ prRelationInfo rel
+        Right msg -> putStrLn $ msg
       loop env
     "n":file:_ -> do
-      rel@(_,(_,mvds)) <- readFile file >>= return . pRelation . lines
-      putStrLn "3NF decomposition (experimental feature):"
-      let rels = normalize3NF rel
-      putStrLn $ unlines $ map (\ (i,r) -> i : ". " ++ prRelation r) (zip ['1'..] rels)
-      putStrLn "BCNF decomposition:"
-      let rels = normalizeBCNF rel
-      putStrLn $ unlines $ map (\ (i,r) -> i : ". " ++ prRelation r) (zip ['1'..] rels)
-      if null mvds
-         then return ()
-         else do
-           putStrLn "4NF decomposition (experimental feature):"
-           let rels = normalize4NF rel
-           putStrLn $ unlines $ map (\ (i,r) -> i : ". " ++ prRelation r) (zip ['1'..] rels)
+      rs <- readFile file >>= return . lines
+      case pRelation rs of
+        Left (rel@(_,(_,mvds))) -> do
+            sequence [do
+              putStrLn hdr
+              putStrLn output
+                      | (hdr,output) <- prNormalizations rel]
+            return ()
+        Right msg -> putStrLn msg
       loop env
     "h":[] -> do
       putStrLn helpMsg
@@ -87,28 +82,12 @@ loop env@(senv, xmls) = do
       loop (senv',xmls)
 
 runSQLScript :: SEnv -> String -> IO Env
-runSQLScript env s = case pScript (preprocSQL (myLexer s)) of
+runSQLScript env s = case parseScript s of
   Ok c -> transScript env c
   Bad s -> putStrLn s >> return env    
 
--- convert keywords to upper case, idents to lower case
-
-preprocSQL :: [Token] -> [Token]
-preprocSQL = map prep where
-  prep t = case t of 
-    PT p (TV s) -> 
-            let us =  map toUpper s 
-            in case treeFind us resWords of 
-              Just u -> PT p u
-              _ -> PT p (TV (map toLower s))
-    _ -> t
-  treeFind s N = Nothing
-  treeFind s (B a t left right) | s < a  = treeFind s left
-                                | s > a  = treeFind s right
-                                | s == a = Just t
-
 alg2latex :: SEnv -> String -> IO ()
-alg2latex env s = case pQuery (preprocSQL (myLexer s)) of
+alg2latex env s = case parseQuery s of
   Bad s -> putStrLn s
   Ok c -> do
     let rel = transQuery c
@@ -154,11 +133,6 @@ alg2latex env s = case pQuery (preprocSQL (myLexer s)) of
     system "pdflatex qconv-latex-tmp.tex > //dev//null"
     system $ viewer ++ " qconv-latex-tmp.pdf"
     return ()
-
-printSQL :: Query -> String
-printSQL = unwords . map addNewline . words . printTree
-  where
-    addNewline w = if elem w ["FROM","WHERE","GROUP","HAVING","ORDER"] then '\n':w else w
  
 mintex = "qconv-latex-tmp.tex"
 

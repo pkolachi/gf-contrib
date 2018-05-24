@@ -96,7 +96,7 @@ FULL	AFP on 4 October 2009 in Sarajevo.
 
 
 
-PART	It adds that an other is injured.
+PART	It adds that several others are injured.
 
 
 
@@ -536,7 +536,7 @@ PART	Abhisit tells to Red Shirts that it wills that it holds a new poll.
 
 PART	They want to charge a person that leads.
 
-PART	It says that a violent incident that is related kills 29 persons and it wounds a person.
+PART	It says that several violent incidents that are related kill 29 persons and it wounds a person.
 
 PART	A thing on 29 June 2010 in Geneva.
 
@@ -661,7 +661,7 @@ PART	It is contrasted to fit something to an agenda that a sort media that doesn
 PART	A much about Faux Nooz.
 
 FULL	A story in here is caused.
-PART	It is a big mess and it needs to big clean up.
+FULL	It is a big mess and it needs to some big clean up.
 PART	A catastrophe is reported and a boat to fish heads an out.
 PART	Because a stigma is a biggest problem a person avoids an entire area.
 PART	It is good.

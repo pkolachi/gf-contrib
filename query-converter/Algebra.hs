@@ -31,6 +31,51 @@ prRelLatex = unlines . map mkLine . zip [0..] . splitToLines [] . concatMap word
   mbox w = w ---- "\\mbox{" ++ w ++ "}"
   mkLine (i,l) = "\\mbox{\\hspace{" ++ show (6*i) ++ "mm}} " ++ l ++ "\\\\"
 
+
+prRelHtml :: Rel -> String
+prRelHtml = fmtRelHtml . printTree
+
+fmtRelHtml :: String -> String
+fmtRelHtml = unlines . map mkLine . zip [0..] . splitToLines [] . concatMap words . lines . rParSep
+ where
+  splitToLines l s = case s of   -- split at each operator
+    ('(':o) : ws | operator o -> (if null l then [] else [unwords (reverse l)])
+                                 ++ splitToLines ['(':opHtml o] ws
+    o : ws | operator o -> (if null l then [] else [unwords (reverse l)])
+                           ++ splitToLines [opHtml o] ws
+    w : ws | ident w    -> splitToLines (mbox w:l) ws
+           | symbol w   -> splitToLines (symbolHtml w:l) ws
+    w : ws              -> splitToLines (w:l) ws
+    _                   -> [unwords (reverse l)]
+  operator o = elem o ops
+  opHtml o = maybe o id $ lookup o opsConv
+  opsConv = zip ops opsHtml
+  ops = ["\\sigma_{","\\pi_{","\\rho_{","\\gamma_{","\\gamma_{,","\\tau_{"]
+  opsHtml = ["σ<sub>","π<sub>","ρ<sub>","γ<sub>","γ<sub>","τ<sub>"]
+  symbol w = elem w symbols
+  symbolHtml w = maybe w id $ lookup w symbolsConv
+  symbolsConv = zip symbols symbolsHtml
+  symbols = ["<","}","\\times","\\delta","\\cup","\\cap","\\backslash","\\bowtie",
+             "\\bowtie_{","\\bowtie^{o}_{","\\bowtie^{oL}_{","\\bowtie^{oR}_{",
+             "\\rightarrow","\\downarrow",
+             "\\mbox{\\textbf{let}}","\\mbox{\\textbf{\\;in\\;}}"]
+  symbolsHtml=["&lt;","</sub>","×","δ","∪","∩","∖","⋈","⋈<sub>","⋈<sup>o</sup><sub>",
+               "⋈<sup>oL</sup><sub>","⋈<sup>oR</sup><sub>","→","↓",
+               "<b>let</b>","<b>in</b>"]
+
+  ident ('(':w) = ident w
+  ident (c1:c2:w) = isLetter c1
+  ident _ = False
+
+  mbox w = "<var>"++id++"</var>"++r ---- "\\mbox{" ++ w ++ "}"
+    where (id,r) = span isAlphaNum w
+  mkLine (i,l) = "<tt>"++replicate i ' '++"</tt>" ++ l ++ "<br>"
+
+  -- transform "(... x)\cup y" into "(... x) \cup y", so that \cup is recognized
+  rParSep (')':'\\':s) = ") \\"++rParSep s
+  rParSep (c:s) = c:rParSep s
+  rParSep "" = ""
+
 ident2id :: Ident -> Id
 ident2id (Ident x) = x
   
@@ -67,10 +112,11 @@ evalRel env r = case r of
   RIntersect rela relb -> Relation.intersect (evalRel env rela) (evalRel env relb)
   RExcept rela relb    -> Relation.subtract (evalRel env rela) (evalRel env relb)
   RNaturalJoin rela relb -> naturalJoin (evalRel env rela) (evalRel env relb)
-  RThetaJoin ra cnd rb -> let tab = cartesian (evalRel env ra) (evalRel env rb) in select (evalCond env cnd tab) tab
+----   RThetaJoin ra cnd rb -> let tab = cartesian (evalRel env ra) (evalRel env rb) in select (evalCond env cnd tab) tab
   RSort sortexps rel   -> sortby (map (evalSortExp env) sortexps) (evalRel env rel)
   RDistinct rel        -> distinct (evalRel env rel)
   RGroup ids ags rel   -> groupAggregate (map ident2id ids) (map evalAggregation ags) (evalRel env rel)
+  _ -> error $ "interpretation not yet covered " ++ printTree r
 
 evalProjection :: Env -> Projection -> (Table -> Tuple -> Value, Id)
 evalProjection env p = case p of
